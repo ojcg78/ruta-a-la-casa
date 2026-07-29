@@ -255,6 +255,39 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
 .line .rm{ background:none; border:1px solid var(--line); border-radius:8px; width:36px; height:36px; cursor:pointer; color:var(--red); font-size:16px; }
 .subtotal{ display:flex; justify-content:space-between; padding-top:10px; margin-top:6px; border-top:1px solid var(--line); font-family:'IBM Plex Mono',monospace; font-size:14px; }
 .subtotal b{ color:var(--navy); }
+
+/* ---------- Ayuda contextual (hint) ---------- */
+.hint{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:15px; height:15px; border-radius:50%;
+  border:1px solid var(--gold); color:var(--gold);
+  font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600;
+  margin-left:5px; cursor:help; position:relative; vertical-align:middle;
+}
+.hint .hint-bubble{
+  visibility:hidden; opacity:0; position:absolute; z-index:20;
+  bottom:22px; left:50%; transform:translateX(-50%);
+  width:230px; background:var(--navy); color:var(--sand);
+  font-family:'Inter',sans-serif; font-size:12.5px; font-weight:400; line-height:1.45;
+  text-align:left; padding:10px 12px; border-radius:8px;
+  box-shadow:0 10px 24px -10px rgba(18,32,58,0.5);
+  transition:opacity .15s ease;
+}
+.hint:hover .hint-bubble, .hint:focus .hint-bubble, .hint:focus-within .hint-bubble{ visibility:visible; opacity:1; }
+
+/* ---------- Guía ---------- */
+.guide-block{ margin-bottom:22px; }
+.guide-block h3{ font-family:'Fraunces',serif; font-size:17px; margin:0 0 10px 0; }
+.guide-block p{ font-size:14px; line-height:1.6; color:var(--ink); margin:0 0 8px 0; }
+.term-list{ display:flex; flex-direction:column; gap:14px; }
+.term{ border-left:3px solid var(--gold-soft); padding-left:14px; }
+.term .term-name{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--navy); font-weight:600; }
+.term .term-def{ font-size:13.5px; color:var(--muted); line-height:1.55; margin-top:3px; }
+.routine-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+@media (max-width:840px){ .routine-grid{ grid-template-columns:1fr; } }
+.routine-card{ background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+.routine-card .rc-freq{ font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--gold); }
+.routine-card ul{ margin:8px 0 0 0; padding-left:18px; font-size:13px; color:var(--ink); line-height:1.6; }
 </style>
 </head>
 <body>
@@ -270,6 +303,11 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.2 5.2-5.2 2.2 2.2-5.2z"/></svg>
       Resumen
     </button>
+    <button class="navbtn" data-page="guia">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.5a2.8 2.8 0 015.4 1c0 1.8-2.6 1.8-2.6 3.5"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>
+      Guía
+    </button>
+    <div class="rail-divider"></div>
     <button class="navbtn" data-page="dinero">
       <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="5"/><circle cx="15" cy="15" r="5"/></svg>
       Ingresos y gastos
@@ -321,7 +359,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
         <div class="kpi"><div class="kpi-lbl">Patrimonio líquido</div><div class="kpi-val" id="kpiSavings">$0</div><div class="kpi-sub">todas las cuentas, en AUD</div></div>
         <div class="kpi"><div class="kpi-lbl">Capacidad de ahorro</div><div class="kpi-val" id="kpiCap">$0</div><div class="kpi-sub">por mes</div></div>
         <div class="kpi"><div class="kpi-lbl">Fondo de emergencia</div><div class="kpi-val" id="kpiEf">$0</div><div class="kpi-sub" id="kpiEfSub">objetivo</div></div>
-        <div class="kpi"><div class="kpi-lbl">House Readiness Score</div><div class="kpi-val" id="kpiScore">0</div><div class="kpi-sub">de 100</div></div>
+        <div class="kpi"><div class="kpi-lbl">House Readiness Score<span class="hint" tabindex="0">?<span class="hint-bubble">35% fondo de emergencia + 30% tasa de ahorro + 35% viabilidad/aprobación bancaria. Detalle completo en la Guía.</span></span></div><div class="kpi-val" id="kpiScore">0</div><div class="kpi-sub">de 100</div></div>
       </div>
 
       <div class="best-card">
@@ -331,6 +369,91 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
           <div class="bc-item"><div class="lbl">Escenario</div><div class="val" id="bestName">—</div></div>
           <div class="bc-item"><div class="lbl">Necesario al contado</div><div class="val" id="bestUpfront">$0</div></div>
           <div class="bc-item"><div class="lbl">Cuota banco (+3%)</div><div class="val" id="bestBank">$0</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== GUÍA ===================== -->
+    <section class="page" data-page="guia">
+      <div class="page-head">
+        <div class="eyebrow">Manual de uso</div>
+        <h2>Guía</h2>
+        <p>Qué hace cada sección, qué significan los términos australianos que la app calcula por ustedes, y cada cuánto conviene actualizar los datos.</p>
+      </div>
+
+      <div class="card">
+        <h2>Qué hace cada sección</h2>
+        <div class="guide-block">
+          <div class="term-list">
+            <div class="term"><div class="term-name">Resumen</div><div class="term-def">El panorama completo de un vistazo: la Ruta (los hitos reales hacia la compra), el patrimonio, la capacidad de ahorro y el mejor escenario del momento. Es de solo lectura — no se edita nada aquí.</div></div>
+            <div class="term"><div class="term-name">Ingresos y gastos</div><div class="term-def">El presupuesto familiar, línea por línea, cada una con su frecuencia real de pago (semanal, quincenal, mensual, anual). También viven aquí los dos parámetros generales: meses restantes hasta la meta y meses de fondo de emergencia objetivo.</div></div>
+            <div class="term"><div class="term-name">Patrimonio</div><div class="term-def">Todas las cuentas líquidas, en cualquier moneda. El total de esta página es el que alimenta directamente cuánto les alcanza para el pie — por eso deja fuera a propósito el super y los CDT a plazo fijo, que no son efectivo disponible hoy.</div></div>
+            <div class="term"><div class="term-name">Escenarios</div><div class="term-def">El simulador de compra. Cada escenario puede tener una o varias propiedades, y calcula cuota real, cuota que exige el banco, LVR, LMI, stamp duty y si el Home Guarantee Scheme aplica.</div></div>
+            <div class="term"><div class="term-name">Flujo de caja</div><div class="term-def">Una proyección mes a mes de los próximos 12 meses, para ver baches puntuales (una visa, un viaje, una reparación grande) antes de que ocurran.</div></div>
+            <div class="term"><div class="term-name">Bitácora</div><div class="term-def">Registro de decisiones financieras grandes (&gt;$1,000): qué decidieron, cuánto, y por qué — para no olvidar el razonamiento con el tiempo.</div></div>
+            <div class="term"><div class="term-name">Propiedades</div><div class="term-def">Las propiedades que ya visitaron, con su propio puntaje y notas, para comparar con cabeza fría.</div></div>
+            <div class="term"><div class="term-name">Respaldo</div><div class="term-def">Exportar o importar todos los datos como un archivo .json. Todo vive solo en este navegador — sin respaldo, un caché borrado se lleva todo.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Términos que la app calcula por ustedes</h2>
+        <div class="term-list">
+          <div class="term">
+            <div class="term-name">LVR (Loan to Value Ratio)</div>
+            <div class="term-def">Qué porcentaje del precio de la propiedad están pidiendo prestado. Con 20% de pie, el LVR es 80%. Por encima de 80% normalmente se paga LMI.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">LMI (Lenders Mortgage Insurance)</div>
+            <div class="term-def">Un seguro que protege al banco (no a ustedes) cuando el pie es menor al 20%. La app lo estima por bandas de LVR — es una referencia de mercado, no una cotización real.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Buffer de servicio APRA (+3%)</div>
+            <div class="term-def">El banco no evalúa si pueden pagar la cuota a la tasa real, sino a la tasa real + 3 puntos porcentuales. Por eso la app muestra dos cuotas distintas: la real y la que el banco exige poder pagar.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Home Guarantee Scheme</div>
+            <div class="term-def">Programa del gobierno federal que permite comprar con 5% de pie sin pagar LMI, si califican (primeros compradores u otros criterios, con tope de precio según la región). La app anula el LMI cuando lo activan — confirmen elegibilidad real antes de confiar en ese número.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Stamp duty (conveyance duty)</div>
+            <div class="term-def">El impuesto de transferencia de propiedad, que varía por estado/territorio. La app usa tasas efectivas aproximadas, con casos especiales ya modelados para ACT y NSW con concesión de primer comprador — los demás estados muestran la tasa estándar.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">House Readiness Score (0-100)</div>
+            <div class="term-def">Un número único que resume tres cosas: 35% qué tan lleno está el fondo de emergencia, 30% la tasa de ahorro sobre el ingreso (tope en 30%), y 35% si algún escenario es viable y si el banco probablemente aprobaría el préstamo. No es una fórmula oficial de ningún banco — es solo una brújula interna para no tener que leer ocho números cada vez.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Cada cuánto actualizar</h2>
+        <div class="routine-grid">
+          <div class="routine-card">
+            <div class="rc-freq">Cada mes</div>
+            <ul>
+              <li>Saldo de cada cuenta en Patrimonio, con el extracto real</li>
+              <li>Costos puntuales nuevos que hayan surgido</li>
+              <li>Exportar un respaldo (.json)</li>
+            </ul>
+          </div>
+          <div class="routine-card">
+            <div class="rc-freq">Cada trimestre</div>
+            <ul>
+              <li>Super y CDT, si los llevan como referencia aparte</li>
+              <li>Tipo de cambio COP/AUD si tienen cuentas en COP</li>
+              <li>Precio y tasa de interés de cada escenario, contra el mercado actual</li>
+            </ul>
+          </div>
+          <div class="routine-card">
+            <div class="rc-freq">Cuando pase algo puntual</div>
+            <ul>
+              <li>Visitaron una propiedad → regístrenla enseguida</li>
+              <li>Tomaron una decisión &gt;$1,000 → a la bitácora, mientras está fresca</li>
+              <li>El banco dio una tasa real → actualícenla en el escenario</li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
@@ -369,7 +492,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
           <div class="stat-row total"><span class="lbl">Ahorro proyectado en el horizonte</span><span class="val" id="capTotal">$0</span></div>
           <div class="stat-row"><span class="lbl">Fondo de emergencia objetivo</span><span class="val" id="efTarget">$0</span></div>
           <div class="stat-row"><span class="lbl">Ahorro disponible sobre el fondo de emergencia</span><span class="val" id="efSurplus">$0</span></div>
-          <div class="stat-row total"><span class="lbl">House Readiness Score (0-100)</span><span class="val" id="hrScore">0</span></div>
+          <div class="stat-row total"><span class="lbl">House Readiness Score (0-100)<span class="hint" tabindex="0">?<span class="hint-bubble">35% fondo de emergencia + 30% tasa de ahorro + 35% viabilidad/aprobación bancaria. Ver la página Guía para el detalle completo.</span></span></span><span class="val" id="hrScore">0</span></div>
         </div>
       </div>
     </section>
@@ -764,10 +887,10 @@ function propHTML(sc, p, idx){
         <div class="field"><label>Otros costos fijos</label><input type="number" value="${p.extra}" data-sc="${sc.id}" data-idx="${idx}" data-field="extra"></div>
         <div class="field"><label>Tasa interés anual (%)</label><input type="number" step="0.1" value="${p.rate}" data-sc="${sc.id}" data-idx="${idx}" data-field="rate"></div>
         <div class="field"><label>Plazo del crédito (años)</label><input type="number" value="${p.years}" data-sc="${sc.id}" data-idx="${idx}" data-field="years"></div>
-        <div class="field"><label>Financiar LMI en el crédito (si pie &lt;20%)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="financeLMI"><option value="true" ${p.financeLMI?'selected':''}>Sí — capitalizarlo en la cuota</option><option value="false" ${!p.financeLMI?'selected':''}>No — pagarlo al contado</option></select></div>
-        <div class="field"><label>Home Guarantee Scheme (5% pie, sin LMI)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="homeGuarantee"><option value="false" ${!p.homeGuarantee?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.homeGuarantee?'selected':''}>Sí — elegible confirmado</option></select></div>
-        <div class="field"><label>Estado / Territorio</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="stampState">${['NSW','VIC','QLD','WA','SA','TAS','NT','ACT'].map(s=>`<option value="${s}" ${p.stampState===s?'selected':''}>${s}</option>`).join('')}</select></div>
-        <div class="field"><label>Primer comprador (concesión stamp duty)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="firstHomeBuyer"><option value="false" ${!p.firstHomeBuyer?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.firstHomeBuyer?'selected':''}>Sí — elegible confirmado</option></select></div>
+        <div class="field"><label>Financiar LMI en el crédito (si pie &lt;20%)<span class="hint" tabindex="0">?<span class="hint-bubble">El LMI es un seguro que protege al banco cuando el pie es menor al 20%. "Financiar" lo suma a la cuota; "pagar al contado" lo suma al upfront.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="financeLMI"><option value="true" ${p.financeLMI?'selected':''}>Sí — capitalizarlo en la cuota</option><option value="false" ${!p.financeLMI?'selected':''}>No — pagarlo al contado</option></select></div>
+        <div class="field"><label>Home Guarantee Scheme (5% pie, sin LMI)<span class="hint" tabindex="0">?<span class="hint-bubble">Programa del gobierno que permite comprar con 5% de pie sin pagar LMI, si califican. Confirma elegibilidad real antes de confiar en este número — ver la página Guía.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="homeGuarantee"><option value="false" ${!p.homeGuarantee?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.homeGuarantee?'selected':''}>Sí — elegible confirmado</option></select></div>
+        <div class="field"><label>Estado / Territorio<span class="hint" tabindex="0">?<span class="hint-bubble">Define la tasa de stamp duty estimada. Son promedios de referencia, no el cálculo exacto de cada oficina de rentas — confirma la cifra real antes de decidir.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="stampState">${['NSW','VIC','QLD','WA','SA','TAS','NT','ACT'].map(s=>`<option value="${s}" ${p.stampState===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="field"><label>Primer comprador (concesión stamp duty)<span class="hint" tabindex="0">?<span class="hint-bubble">Si aplica, la app ya modela la exención de ACT y la de NSW (hasta $800k). Los demás estados muestran la tasa estándar sin descuento.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="firstHomeBuyer"><option value="false" ${!p.firstHomeBuyer?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.firstHomeBuyer?'selected':''}>Sí — elegible confirmado</option></select></div>
       </div>
     </div>`;
 }
@@ -794,8 +917,8 @@ function scenarioHTML(sc){
         <div class="rbox"><div class="lbl">Cuota crédito mensual</div><div class="val" id="cm-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Cuota crédito semanal</div><div class="val" id="cw-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Ingreso libre tras cuota</div><div class="val" id="ia-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Cuota evaluación bancaria (+3%)</div><div class="val" id="cs-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">LVR promedio</div><div class="val" id="lvr-${sc.id}">0%</div></div>
+        <div class="rbox"><div class="lbl">Cuota evaluación bancaria (+3%)<span class="hint" tabindex="0">?<span class="hint-bubble">El banco no evalúa a la tasa real, sino a la tasa real + 3 puntos (buffer de servicio de APRA). Esta es la cuota que realmente exige poder pagar.</span></span></div><div class="val" id="cs-${sc.id}">$0</div></div>
+        <div class="rbox"><div class="lbl">LVR promedio<span class="hint" tabindex="0">?<span class="hint-bubble">Qué porcentaje del precio están pidiendo prestado. Por encima de 80% normalmente se paga LMI.</span></span></div><div class="val" id="lvr-${sc.id}">0%</div></div>
         <div class="rbox"><div class="lbl">LMI estimado (aprox.)</div><div class="val" id="lmi-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Stamp duty estimado (aprox.)</div><div class="val" id="sd-${sc.id}">$0</div></div>
       </div>
