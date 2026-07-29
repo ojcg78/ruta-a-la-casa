@@ -272,7 +272,7 @@ let state = {
 };
 
 function newProperty(){
-  return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30, financeLMI:true };
+  return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30, financeLMI:true, homeGuarantee:false };
 }
 function newScenario(name){
   return { id: crypto.randomUUID(), name: name || 'Escenario', properties:[newProperty()], rentReplace:0 };
@@ -316,7 +316,10 @@ async function load(){
   if(state.scenarios){
     state.scenarios.forEach(sc=>{
       if(sc.rentReplace === undefined) sc.rentReplace = 0;
-      (sc.properties||[]).forEach(p=>{ if(p.financeLMI === undefined) p.financeLMI = true; });
+      (sc.properties||[]).forEach(p=>{
+        if(p.financeLMI === undefined) p.financeLMI = true;
+        if(p.homeGuarantee === undefined) p.homeGuarantee = false;
+      });
     });
   }
   if(!state.scenarios || state.scenarios.length === 0){
@@ -407,7 +410,7 @@ function monthlyRepayment(loanAmount, annualRatePct, years){
 
 function calcScenario(sc){
   let totalPrice=0, totalDeposit=0, totalClosing=0, totalExtra=0, totalRepayment=0, totalStressRepayment=0;
-  let totalLoanForLVR=0, totalLMI=0, lmiUpfront=0;
+  let totalLoanForLVR=0, totalLMI=0, lmiUpfront=0, hgCount=0;
   sc.properties.forEach(p=>{
     totalPrice += p.price;
     const depositAmt = p.price * (p.deposit/100);
@@ -416,7 +419,9 @@ function calcScenario(sc){
     totalExtra += p.extra;
     const loanAmount = p.price - depositAmt;
     const lvr = p.price > 0 ? (loanAmount / p.price) * 100 : 0;
-    const lmi = estimateLMI(loanAmount, lvr);
+    // El Home Guarantee Scheme reemplaza el LMI con una garantía del gobierno: no se paga LMI.
+    const lmi = p.homeGuarantee ? 0 : estimateLMI(loanAmount, lvr);
+    if(p.homeGuarantee) hgCount++;
     totalLoanForLVR += loanAmount;
     totalLMI += lmi;
     // Practica habitual: el LMI se capitaliza dentro del credito (sube la cuota un poco)
@@ -447,7 +452,7 @@ function calcScenario(sc){
   return { totalPrice, totalUpfront, gap, reqMonthly, reqWeekly, viable, pct, capMonthly,
     totalRepayment, repaymentWeekly, incomeAfterRepayment, repaymentFits,
     rentReplace, totalStressRepayment, stressRepaymentWeekly, stressIncomeAfterRepayment, bankApproves,
-    avgLVR, totalLMI };
+    avgLVR, totalLMI, hgCount };
 }
 
 function propHTML(sc, p, idx){
@@ -465,6 +470,7 @@ function propHTML(sc, p, idx){
         <div class="field"><label>Tasa interés anual (%)</label><input type="number" step="0.1" value="${p.rate}" data-sc="${sc.id}" data-idx="${idx}" data-field="rate"></div>
         <div class="field"><label>Plazo del crédito (años)</label><input type="number" value="${p.years}" data-sc="${sc.id}" data-idx="${idx}" data-field="years"></div>
         <div class="field"><label>Financiar LMI en el crédito (si pie &lt;20%)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="financeLMI"><option value="true" ${p.financeLMI?'selected':''}>Sí — capitalizarlo en la cuota</option><option value="false" ${!p.financeLMI?'selected':''}>No — pagarlo al contado</option></select></div>
+        <div class="field"><label>Home Guarantee Scheme (5% pie, sin LMI)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="homeGuarantee"><option value="false" ${!p.homeGuarantee?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.homeGuarantee?'selected':''}>Sí — elegible confirmado</option></select></div>
       </div>
     </div>`;
 }
@@ -503,6 +509,9 @@ function scenarioHTML(sc){
         <span class="lbl">Aprobación bancaria probable (buffer APRA +3%)</span>
         <span class="badge" id="bank-${sc.id}">—</span>
       </div>
+      <div class="stat-row" id="hgnote-${sc.id}" style="display:none; padding-top:8px;">
+        <span class="lbl" style="color:var(--gold);">⚠ Este escenario asume Home Guarantee Scheme — confirma que califican (ingresos, primera compra) y que el precio está bajo el tope de tu región antes de descartar el LMI.</span>
+      </div>
     </div>`;
 }
 
@@ -529,8 +538,8 @@ function setupScenarioDelegation(){
     if(t.dataset.field && t.dataset.sc){
       const sc = state.scenarios.find(s=>s.id===t.dataset.sc);
       const idx = parseInt(t.dataset.idx);
-      if(t.dataset.field === 'financeLMI'){
-        sc.properties[idx].financeLMI = (t.value === 'true');
+      if(t.dataset.field === 'financeLMI' || t.dataset.field === 'homeGuarantee'){
+        sc.properties[idx][t.dataset.field] = (t.value === 'true');
       } else {
         sc.properties[idx][t.dataset.field] = parseFloat(t.value) || 0;
       }
@@ -597,6 +606,7 @@ function updateComputed(){
     const bankEl = $('bank-'+sc.id);
     bankEl.textContent = r.bankApproves ? 'Probable' : 'Ajustar cuota o pie';
     bankEl.className = 'badge ' + (r.bankApproves ? 'viable' : 'no');
+    $('hgnote-'+sc.id).style.display = r.hgCount > 0 ? 'flex' : 'none';
   });
 
   const minReq = Math.min(...rows.map(x=>x.r.reqMonthly));
