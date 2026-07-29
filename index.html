@@ -288,6 +288,22 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
 .routine-card{ background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
 .routine-card .rc-freq{ font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--gold); }
 .routine-card ul{ margin:8px 0 0 0; padding-left:18px; font-size:13px; color:var(--ink); line-height:1.6; }
+
+/* ---------- Historial de patrimonio ---------- */
+.nw-chart-wrap{ margin-bottom:16px; }
+.nw-chart{ width:100%; height:140px; }
+
+/* ---------- Impresión para el bróker ---------- */
+.broker-print{ display:none; }
+@media print{
+  .shell{ display:none; }
+  .broker-print{ display:block; padding:30px; font-family:'Inter',sans-serif; color:#12203A; }
+  .broker-print h1{ font-family:'Fraunces',serif; font-size:22px; margin:0 0 4px 0; }
+  .broker-print .bp-date{ color:#6B7280; font-size:12.5px; margin:0 0 20px 0; }
+  .broker-print table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .broker-print th, .broker-print td{ border:1px solid #ccc; padding:8px 10px; text-align:left; }
+  .broker-print .bp-note{ margin-top:16px; font-size:11.5px; color:#6B7280; }
+}
 </style>
 </head>
 <body>
@@ -359,7 +375,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
         <div class="kpi"><div class="kpi-lbl">Patrimonio líquido</div><div class="kpi-val" id="kpiSavings">$0</div><div class="kpi-sub">todas las cuentas, en AUD</div></div>
         <div class="kpi"><div class="kpi-lbl">Capacidad de ahorro</div><div class="kpi-val" id="kpiCap">$0</div><div class="kpi-sub">por mes</div></div>
         <div class="kpi"><div class="kpi-lbl">Fondo de emergencia</div><div class="kpi-val" id="kpiEf">$0</div><div class="kpi-sub" id="kpiEfSub">objetivo</div></div>
-        <div class="kpi"><div class="kpi-lbl">House Readiness Score<span class="hint" tabindex="0">?<span class="hint-bubble">35% fondo de emergencia + 30% tasa de ahorro + 35% viabilidad/aprobación bancaria. Detalle completo en la Guía.</span></span></div><div class="kpi-val" id="kpiScore">0</div><div class="kpi-sub">de 100</div></div>
+        <div class="kpi"><div class="kpi-lbl">House Readiness Score<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">35% fondo de emergencia + 30% tasa de ahorro + 35% viabilidad/aprobación bancaria. Detalle completo en la Guía.</span></span></div><div class="kpi-val" id="kpiScore">0</div><div class="kpi-sub">de 100</div></div>
       </div>
 
       <div class="best-card">
@@ -455,12 +471,35 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       </div>
 
       <div class="card">
+        <h2>Otras funciones</h2>
+        <div class="term-list">
+          <div class="term">
+            <div class="term-name">Cargar cuentas desde Excel (Patrimonio)</div>
+            <div class="term-def">Igual que con ingresos y gastos, pero con columnas Nombre, Moneda, Saldo y FX. También reemplaza las cuentas actuales, y también pide confirmación antes de aplicar.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Historial de patrimonio</div>
+            <div class="term-def">El botón "Registrar patrimonio de este mes" (en Patrimonio) guarda una foto del total líquido de ese momento. Si lo tocan varias veces en el mismo mes, actualiza el registro de ese mes en vez de duplicarlo — así solo queda un punto por mes en el gráfico.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Duplicar escenario</div>
+            <div class="term-def">El botón "Duplicar" junto a "Eliminar" en cada escenario crea una copia completa con todas sus propiedades — útil para comparar variantes del mismo escenario (ej. mismo departamento con 10% vs 15% de pie) sin reconstruirlo desde cero.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Resumen para el bróker</div>
+            <div class="term-def">El botón en la tarjeta de Comparación (dentro de Escenarios) abre el diálogo de impresión del navegador con una tabla limpia de todos los escenarios — desde ahí pueden imprimirlo en papel o guardarlo como PDF para llevarlo a una reunión.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>Cada cuánto actualizar</h2>
         <div class="routine-grid">
           <div class="routine-card">
             <div class="rc-freq">Cada mes</div>
             <ul>
               <li>Saldo de cada cuenta en Patrimonio, con el extracto real</li>
+              <li>Registrar el patrimonio de este mes (botón en Patrimonio)</li>
               <li>Ingresos y gastos: si cambiaron, recarga el Excel actualizado</li>
               <li>Costos puntuales nuevos que hayan surgido</li>
               <li>Exportar un respaldo (.json)</li>
@@ -494,7 +533,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
         <p>Como unidad familiar — cada línea con su propia frecuencia real de pago, para que la conversión a mensual sea exacta.</p>
       </div>
       <div class="card">
-        <h2>Cargar desde Excel<span class="hint" tabindex="0">?<span class="hint-bubble">Reemplaza todos los ingresos y gastos actuales por los del archivo. Descarga la plantilla primero si no tienes un archivo con estas columnas todavía.</span></span></h2>
+        <h2>Cargar desde Excel<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Reemplaza todos los ingresos y gastos actuales por los del archivo. Descarga la plantilla primero si no tienes un archivo con estas columnas todavía.</span></span></h2>
         <p style="font-size:13px;color:var(--muted);margin:0 0 14px 0;">Un archivo .xlsx con columnas <b>Tipo</b> (Ingreso/Gasto), <b>Concepto</b>, <b>Monto</b> y <b>Frecuencia</b> (semanal/quincenal/mensual/anual). Así lo mantienen ustedes mismos cada mes, sin escribir cada línea a mano.</p>
         <button class="btn ghost small" id="downloadTemplateBtn">Descargar plantilla (.xlsx)</button>
         <button class="btn small" id="importExcelBtn">Cargar archivo (.xlsx)</button>
@@ -527,7 +566,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
           <div class="stat-row total"><span class="lbl">Ahorro proyectado en el horizonte</span><span class="val" id="capTotal">$0</span></div>
           <div class="stat-row"><span class="lbl">Fondo de emergencia objetivo</span><span class="val" id="efTarget">$0</span></div>
           <div class="stat-row"><span class="lbl">Ahorro disponible sobre el fondo de emergencia</span><span class="val" id="efSurplus">$0</span></div>
-          <div class="stat-row total"><span class="lbl">House Readiness Score (0-100)<span class="hint" tabindex="0">?<span class="hint-bubble">35% fondo de emergencia + 30% tasa de ahorro + 35% viabilidad/aprobación bancaria. Ver la página Guía para el detalle completo.</span></span></span><span class="val" id="hrScore">0</span></div>
+          <div class="stat-row total"><span class="lbl">House Readiness Score (0-100)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">35% fondo de emergencia + 30% tasa de ahorro + 35% viabilidad/aprobación bancaria. Ver la página Guía para el detalle completo.</span></span></span><span class="val" id="hrScore">0</span></div>
         </div>
       </div>
     </section>
@@ -540,8 +579,21 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
         <p>Cuentas líquidas en cualquier moneda — el total aquí es lo que alimenta directamente cuánto les alcanza para el pie. Super, CDT a plazo fijo y vehículos quedan fuera a propósito: no son efectivo disponible hoy.</p>
       </div>
       <div class="card">
+        <h2>Cargar cuentas desde Excel<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Reemplaza todas las cuentas actuales por las del archivo. Descarga la plantilla primero si no tienes un archivo con estas columnas.</span></span></h2>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 14px 0;">Columnas <b>Nombre</b>, <b>Moneda</b> (AUD/COP), <b>Saldo</b> y <b>FX</b> (solo si es COP).</p>
+        <button class="btn ghost small" id="downloadAccountTemplateBtn">Descargar plantilla (.xlsx)</button>
+        <button class="btn small" id="importAccountExcelBtn">Cargar archivo (.xlsx)</button>
+        <input type="file" id="importAccountExcelFile" accept=".xlsx,.xls,.csv" style="display:none;">
+      </div>
+      <div class="card">
         <div id="accountLines"></div>
         <div class="addrow"><button class="btn ghost small" id="addAccount">+ Agregar cuenta</button></div>
+      </div>
+      <div class="card">
+        <h2>Historial de patrimonio<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Guarda una foto del patrimonio líquido total una vez al mes, para ver la tendencia real con el tiempo.</span></span></h2>
+        <div class="nw-chart-wrap" id="nwHistoryChart"></div>
+        <div class="table-scroll"><table class="compare" id="nwHistoryTable"></table></div>
+        <div class="addrow" style="margin-top:14px;"><button class="btn ghost small" id="snapshotBtn">+ Registrar patrimonio de este mes</button></div>
       </div>
     </section>
 
@@ -558,6 +610,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       <div class="card" style="margin-top:26px;">
         <h2>Comparación</h2>
         <div class="table-scroll"><table class="compare" id="compareTable"></table></div>
+        <div class="addrow" style="margin-top:14px;"><button class="btn ghost small" id="printBrokerBtn">Generar resumen para el bróker (imprimir/PDF)</button></div>
       </div>
     </section>
 
@@ -623,6 +676,8 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
   </main>
 </div>
 
+<div class="broker-print" id="brokerPrint"></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.20.2/xlsx.full.min.js"></script>
 <script>
 const fmt = n => '$' + (Math.round(n)).toLocaleString('en-AU');
@@ -657,7 +712,8 @@ let state = {
   accounts: [],
   oneOffs: [],
   decisions: [],
-  propertyVisits: []
+  propertyVisits: [],
+  netWorthHistory: []
 };
 
 function newProperty(){
@@ -721,6 +777,7 @@ async function load(){
   if(!state.oneOffs) state.oneOffs = [];
   if(!state.decisions) state.decisions = [];
   if(!state.propertyVisits) state.propertyVisits = [];
+  if(!state.netWorthHistory) state.netWorthHistory = [];
   if(!state.incomes || state.incomes.length === 0){
     state.incomes = [
       { id: crypto.randomUUID(), name:'Ingreso tuyo', amount:0, freq:'quincenal' },
@@ -778,9 +835,9 @@ function lineHTML(item, kind){
     <div class="line" data-row="${item.id}">
       <div class="field"><label>Concepto</label><input value="${item.name}" data-kind="${kind}" data-id="${item.id}" data-field="name"></div>
       <div class="sub-row">
-        <div class="field"><label>Monto</label><input type="number" value="${item.amount}" data-kind="${kind}" data-id="${item.id}" data-field="amount"></div>
+        <div class="field"><label>Monto</label><input type="number" min="0" value="${item.amount}" data-kind="${kind}" data-id="${item.id}" data-field="amount"></div>
         <div class="field"><label>Frecuencia</label><select data-kind="${kind}" data-id="${item.id}" data-field="freq">${freqOptions(item.freq)}</select></div>
-        <button class="rm" data-kind="${kind}" data-id="${item.id}" data-role="delLine" title="Quitar">×</button>
+        <button class="rm" data-kind="${kind}" data-id="${item.id}" data-role="delLine" title="Quitar" aria-label="${kind==='income'?'Eliminar ingreso':'Eliminar gasto'}: ${item.name}">×</button>
       </div>
     </div>`;
 }
@@ -797,7 +854,7 @@ function setupLineDelegation(containerId){
     if(!t.dataset.field) return;
     const list = t.dataset.kind === 'income' ? state.incomes : state.expenses;
     const item = list.find(i=>i.id === t.dataset.id);
-    item[t.dataset.field] = t.dataset.field === 'amount' ? (parseFloat(t.value)||0) : t.value;
+    item[t.dataset.field] = t.dataset.field === 'amount' ? Math.max(0, parseFloat(t.value)||0) : t.value;
     updateComputed(); save();
   });
   wrap.addEventListener('click', e=>{
@@ -914,19 +971,19 @@ function propHTML(sc, p, idx){
     <div class="prop" data-row="${idx}">
       <div class="prop-head">
         <span class="tag">Propiedad ${idx+1}</span>
-        <button class="rm" data-sc="${sc.id}" data-idx="${idx}" data-role="delProp" title="Quitar propiedad">×</button>
+        <button class="rm" data-sc="${sc.id}" data-idx="${idx}" data-role="delProp" title="Quitar propiedad" aria-label="Eliminar propiedad ${idx+1}">×</button>
       </div>
       <div class="grid6">
-        <div class="field"><label>Precio</label><input type="number" value="${p.price}" data-sc="${sc.id}" data-idx="${idx}" data-field="price"></div>
-        <div class="field"><label>Pie (%)</label><input type="number" value="${p.deposit}" data-sc="${sc.id}" data-idx="${idx}" data-field="deposit"></div>
-        <div class="field"><label>Costos de cierre (%)</label><input type="number" value="${p.closing}" data-sc="${sc.id}" data-idx="${idx}" data-field="closing"></div>
-        <div class="field"><label>Otros costos fijos</label><input type="number" value="${p.extra}" data-sc="${sc.id}" data-idx="${idx}" data-field="extra"></div>
-        <div class="field"><label>Tasa interés anual (%)</label><input type="number" step="0.1" value="${p.rate}" data-sc="${sc.id}" data-idx="${idx}" data-field="rate"></div>
-        <div class="field"><label>Plazo del crédito (años)</label><input type="number" value="${p.years}" data-sc="${sc.id}" data-idx="${idx}" data-field="years"></div>
-        <div class="field"><label>Financiar LMI en el crédito (si pie &lt;20%)<span class="hint" tabindex="0">?<span class="hint-bubble">El LMI es un seguro que protege al banco cuando el pie es menor al 20%. "Financiar" lo suma a la cuota; "pagar al contado" lo suma al upfront.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="financeLMI"><option value="true" ${p.financeLMI?'selected':''}>Sí — capitalizarlo en la cuota</option><option value="false" ${!p.financeLMI?'selected':''}>No — pagarlo al contado</option></select></div>
-        <div class="field"><label>Home Guarantee Scheme (5% pie, sin LMI)<span class="hint" tabindex="0">?<span class="hint-bubble">Programa del gobierno que permite comprar con 5% de pie sin pagar LMI, si califican. Confirma elegibilidad real antes de confiar en este número — ver la página Guía.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="homeGuarantee"><option value="false" ${!p.homeGuarantee?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.homeGuarantee?'selected':''}>Sí — elegible confirmado</option></select></div>
-        <div class="field"><label>Estado / Territorio<span class="hint" tabindex="0">?<span class="hint-bubble">Define la tasa de stamp duty estimada. Son promedios de referencia, no el cálculo exacto de cada oficina de rentas — confirma la cifra real antes de decidir.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="stampState">${['NSW','VIC','QLD','WA','SA','TAS','NT','ACT'].map(s=>`<option value="${s}" ${p.stampState===s?'selected':''}>${s}</option>`).join('')}</select></div>
-        <div class="field"><label>Primer comprador (concesión stamp duty)<span class="hint" tabindex="0">?<span class="hint-bubble">Si aplica, la app ya modela la exención de ACT y la de NSW (hasta $800k). Los demás estados muestran la tasa estándar sin descuento.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="firstHomeBuyer"><option value="false" ${!p.firstHomeBuyer?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.firstHomeBuyer?'selected':''}>Sí — elegible confirmado</option></select></div>
+        <div class="field"><label>Precio</label><input type="number" min="0" value="${p.price}" data-sc="${sc.id}" data-idx="${idx}" data-field="price"></div>
+        <div class="field"><label>Pie (%)</label><input type="number" min="0" max="100" value="${p.deposit}" data-sc="${sc.id}" data-idx="${idx}" data-field="deposit"></div>
+        <div class="field"><label>Costos de cierre (%)</label><input type="number" min="0" max="100" value="${p.closing}" data-sc="${sc.id}" data-idx="${idx}" data-field="closing"></div>
+        <div class="field"><label>Otros costos fijos</label><input type="number" min="0" value="${p.extra}" data-sc="${sc.id}" data-idx="${idx}" data-field="extra"></div>
+        <div class="field"><label>Tasa interés anual (%)</label><input type="number" min="0" max="20" step="0.1" value="${p.rate}" data-sc="${sc.id}" data-idx="${idx}" data-field="rate"></div>
+        <div class="field"><label>Plazo del crédito (años)</label><input type="number" min="1" max="40" value="${p.years}" data-sc="${sc.id}" data-idx="${idx}" data-field="years"></div>
+        <div class="field"><label>Financiar LMI en el crédito (si pie &lt;20%)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">El LMI es un seguro que protege al banco cuando el pie es menor al 20%. "Financiar" lo suma a la cuota; "pagar al contado" lo suma al upfront.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="financeLMI"><option value="true" ${p.financeLMI?'selected':''}>Sí — capitalizarlo en la cuota</option><option value="false" ${!p.financeLMI?'selected':''}>No — pagarlo al contado</option></select></div>
+        <div class="field"><label>Home Guarantee Scheme (5% pie, sin LMI)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Programa del gobierno que permite comprar con 5% de pie sin pagar LMI, si califican. Confirma elegibilidad real antes de confiar en este número — ver la página Guía.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="homeGuarantee"><option value="false" ${!p.homeGuarantee?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.homeGuarantee?'selected':''}>Sí — elegible confirmado</option></select></div>
+        <div class="field"><label>Estado / Territorio<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Define la tasa de stamp duty estimada. Son promedios de referencia, no el cálculo exacto de cada oficina de rentas — confirma la cifra real antes de decidir.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="stampState">${['NSW','VIC','QLD','WA','SA','TAS','NT','ACT'].map(s=>`<option value="${s}" ${p.stampState===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="field"><label>Primer comprador (concesión stamp duty)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Si aplica, la app ya modela la exención de ACT y la de NSW (hasta $800k). Los demás estados muestran la tasa estándar sin descuento.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="firstHomeBuyer"><option value="false" ${!p.firstHomeBuyer?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.firstHomeBuyer?'selected':''}>Sí — elegible confirmado</option></select></div>
       </div>
     </div>`;
 }
@@ -937,6 +994,7 @@ function scenarioHTML(sc){
       <div class="scenario-head">
         <input class="name" value="${sc.name}" data-id="${sc.id}" data-role="name">
         <span class="badge" id="badge-${sc.id}">—</span>
+        <button class="btn ghost small" data-id="${sc.id}" data-role="dupScenario">Duplicar</button>
         <button class="btn danger small" data-id="${sc.id}" data-role="delScenario">Eliminar</button>
       </div>
       <div class="props" id="props-${sc.id}">${sc.properties.map((p,idx)=>propHTML(sc,p,idx)).join('')}</div>
@@ -953,8 +1011,8 @@ function scenarioHTML(sc){
         <div class="rbox"><div class="lbl">Cuota crédito mensual</div><div class="val" id="cm-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Cuota crédito semanal</div><div class="val" id="cw-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Ingreso libre tras cuota</div><div class="val" id="ia-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Cuota evaluación bancaria (+3%)<span class="hint" tabindex="0">?<span class="hint-bubble">El banco no evalúa a la tasa real, sino a la tasa real + 3 puntos (buffer de servicio de APRA). Esta es la cuota que realmente exige poder pagar.</span></span></div><div class="val" id="cs-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">LVR promedio<span class="hint" tabindex="0">?<span class="hint-bubble">Qué porcentaje del precio están pidiendo prestado. Por encima de 80% normalmente se paga LMI.</span></span></div><div class="val" id="lvr-${sc.id}">0%</div></div>
+        <div class="rbox"><div class="lbl">Cuota evaluación bancaria (+3%)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">El banco no evalúa a la tasa real, sino a la tasa real + 3 puntos (buffer de servicio de APRA). Esta es la cuota que realmente exige poder pagar.</span></span></div><div class="val" id="cs-${sc.id}">$0</div></div>
+        <div class="rbox"><div class="lbl">LVR promedio<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Qué porcentaje del precio están pidiendo prestado. Por encima de 80% normalmente se paga LMI.</span></span></div><div class="val" id="lvr-${sc.id}">0%</div></div>
         <div class="rbox"><div class="lbl">LMI estimado (aprox.)</div><div class="val" id="lmi-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Stamp duty estimado (aprox.)</div><div class="val" id="sd-${sc.id}">$0</div></div>
       </div>
@@ -1000,7 +1058,12 @@ function setupScenarioDelegation(){
       } else if(t.dataset.field === 'stampState'){
         sc.properties[idx].stampState = t.value;
       } else {
-        sc.properties[idx][t.dataset.field] = parseFloat(t.value) || 0;
+        let val = parseFloat(t.value) || 0;
+        if(t.dataset.field === 'deposit' || t.dataset.field === 'closing') val = Math.min(100, Math.max(0, val));
+        if(t.dataset.field === 'rate') val = Math.max(0, val);
+        if(t.dataset.field === 'years') val = Math.max(1, Math.round(val));
+        if(t.dataset.field === 'price' || t.dataset.field === 'extra') val = Math.max(0, val);
+        sc.properties[idx][t.dataset.field] = val;
       }
       updateComputed(); save();
     }
@@ -1009,6 +1072,14 @@ function setupScenarioDelegation(){
     const role = e.target.dataset.role;
     if(role === 'delScenario'){
       state.scenarios = state.scenarios.filter(s=>s.id!==e.target.dataset.id);
+      buildScenarios(); updateComputed(); save();
+    } else if(role === 'dupScenario'){
+      const sc = state.scenarios.find(s=>s.id===e.target.dataset.id);
+      const clone = JSON.parse(JSON.stringify(sc));
+      clone.id = crypto.randomUUID();
+      clone.name = sc.name + ' (copia)';
+      const idx = state.scenarios.indexOf(sc);
+      state.scenarios.splice(idx+1, 0, clone);
       buildScenarios(); updateComputed(); save();
     } else if(role === 'addProp'){
       const sc = state.scenarios.find(s=>s.id===e.target.dataset.id);
@@ -1059,6 +1130,7 @@ function updateComputed(){
   const capMonthly = capacityMonthly();
   const savingsCash = totalSavingsCash();
   $('savingsTotal').textContent = fmt(savingsCash);
+  renderNetWorthHistory();
   $('capMonth').textContent = fmt(capMonthly);
   $('capWeek').textContent = fmt(capMonthly/4.33);
   $('capTotal').textContent = fmt(capMonthly * (state.months||0) + savingsCash);
@@ -1155,12 +1227,12 @@ function newAccount(){ return { id: crypto.randomUUID(), name:'Nueva cuenta', cu
 function accountHTML(a){
   return `
     <div class="prop" data-row="${a.id}">
-      <div class="prop-head"><span class="tag">Cuenta</span><button class="rm" data-id="${a.id}" data-role="delAccount" title="Quitar">×</button></div>
+      <div class="prop-head"><span class="tag">Cuenta</span><button class="rm" data-id="${a.id}" data-role="delAccount" title="Quitar" aria-label="Eliminar cuenta: ${a.name}">×</button></div>
       <div class="grid6">
         <div class="field"><label>Nombre / institución</label><input value="${a.name}" data-id="${a.id}" data-field="name"></div>
         <div class="field"><label>Moneda</label><select data-id="${a.id}" data-field="currency"><option value="AUD" ${a.currency==='AUD'?'selected':''}>AUD</option><option value="COP" ${a.currency==='COP'?'selected':''}>COP</option></select></div>
         <div class="field"><label>Saldo</label><input type="number" value="${a.balance}" data-id="${a.id}" data-field="balance"></div>
-        <div class="field"><label>FX (COP por AUD, solo si es COP)</label><input type="number" value="${a.fx||0}" data-id="${a.id}" data-field="fx"></div>
+        <div class="field"><label>FX (COP por AUD, solo si es COP)</label><input type="number" min="0" value="${a.fx||0}" data-id="${a.id}" data-field="fx"></div>
       </div>
     </div>`;
 }
@@ -1186,10 +1258,10 @@ function newOneOff(){ return { id: crypto.randomUUID(), name:'Costo puntual', am
 function oneOffHTML(o){
   return `
     <div class="prop" data-row="${o.id}">
-      <div class="prop-head"><span class="tag">Costo puntual</span><button class="rm" data-id="${o.id}" data-role="delOneOff" title="Quitar">×</button></div>
+      <div class="prop-head"><span class="tag">Costo puntual</span><button class="rm" data-id="${o.id}" data-role="delOneOff" title="Quitar" aria-label="Eliminar costo puntual: ${o.name}">×</button></div>
       <div class="grid6">
         <div class="field"><label>Concepto</label><input value="${o.name}" data-id="${o.id}" data-field="name"></div>
-        <div class="field"><label>Monto (AUD)</label><input type="number" value="${o.amount}" data-id="${o.id}" data-field="amount"></div>
+        <div class="field"><label>Monto (AUD)</label><input type="number" min="0" value="${o.amount}" data-id="${o.id}" data-field="amount"></div>
         <div class="field"><label>Mes (1-12 desde hoy)</label><input type="number" min="1" max="12" value="${o.month}" data-id="${o.id}" data-field="month"></div>
       </div>
     </div>`;
@@ -1232,11 +1304,11 @@ function newDecision(){ return { id: crypto.randomUUID(), date:'', decision:'', 
 function decisionHTML(d){
   return `
     <div class="prop" data-row="${d.id}">
-      <div class="prop-head"><span class="tag">Decisión</span><button class="rm" data-id="${d.id}" data-role="delDecision" title="Quitar">×</button></div>
+      <div class="prop-head"><span class="tag">Decisión</span><button class="rm" data-id="${d.id}" data-role="delDecision" title="Quitar" aria-label="Eliminar decisión">×</button></div>
       <div class="grid6">
         <div class="field"><label>Fecha</label><input type="date" value="${d.date}" data-id="${d.id}" data-field="date"></div>
         <div class="field"><label>Decisión</label><input value="${d.decision}" data-id="${d.id}" data-field="decision"></div>
-        <div class="field"><label>Monto (AUD)</label><input type="number" value="${d.amount}" data-id="${d.id}" data-field="amount"></div>
+        <div class="field"><label>Monto (AUD)</label><input type="number" min="0" value="${d.amount}" data-id="${d.id}" data-field="amount"></div>
         <div class="field"><label>Notas</label><input value="${d.notes}" data-id="${d.id}" data-field="notes"></div>
       </div>
     </div>`;
@@ -1263,12 +1335,12 @@ function newVisit(){ return { id: crypto.randomUUID(), address:'', price:0, beds
 function visitHTML(v){
   return `
     <div class="prop" data-row="${v.id}">
-      <div class="prop-head"><span class="tag">Propiedad visitada</span><button class="rm" data-id="${v.id}" data-role="delVisit" title="Quitar">×</button></div>
+      <div class="prop-head"><span class="tag">Propiedad visitada</span><button class="rm" data-id="${v.id}" data-role="delVisit" title="Quitar" aria-label="Eliminar propiedad visitada: ${v.address}">×</button></div>
       <div class="grid6">
         <div class="field"><label>Dirección / link</label><input value="${v.address}" data-id="${v.id}" data-field="address"></div>
-        <div class="field"><label>Precio</label><input type="number" value="${v.price}" data-id="${v.id}" data-field="price"></div>
-        <div class="field"><label>Habitaciones</label><input type="number" value="${v.beds}" data-id="${v.id}" data-field="beds"></div>
-        <div class="field"><label>Baños</label><input type="number" value="${v.baths}" data-id="${v.id}" data-field="baths"></div>
+        <div class="field"><label>Precio</label><input type="number" min="0" value="${v.price}" data-id="${v.id}" data-field="price"></div>
+        <div class="field"><label>Habitaciones</label><input type="number" min="0" value="${v.beds}" data-id="${v.id}" data-field="beds"></div>
+        <div class="field"><label>Baños</label><input type="number" min="0" value="${v.baths}" data-id="${v.id}" data-field="baths"></div>
         <div class="field"><label>Score (0-10)</label><input type="number" min="0" max="10" value="${v.score}" data-id="${v.id}" data-field="score"></div>
         <div class="field"><label>Notas / pros y contras</label><input value="${v.notes}" data-id="${v.id}" data-field="notes"></div>
       </div>
@@ -1383,6 +1455,124 @@ $('importExcelFile').addEventListener('change', e=>{
       if(expenses.length) state.expenses = expenses;
       buildLines('incomeLines', state.incomes, 'income');
       buildLines('expenseLines', state.expenses, 'expense');
+      updateComputed(); save();
+    }catch(err){
+      console.error(err);
+      alert('No se pudo leer el archivo. Verifica que sea un .xlsx, .xls o .csv válido con el formato de la plantilla.');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+});
+
+// ---------- Historial de patrimonio ----------
+function currentMonthKey(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+$('snapshotBtn').addEventListener('click', ()=>{
+  const key = currentMonthKey();
+  const value = totalSavingsCash();
+  const existing = state.netWorthHistory.find(h=>h.monthKey===key);
+  if(existing){ existing.value = value; }
+  else { state.netWorthHistory.push({ id: crypto.randomUUID(), monthKey:key, value }); }
+  state.netWorthHistory.sort((a,b)=> a.monthKey.localeCompare(b.monthKey));
+  renderNetWorthHistory();
+  save();
+});
+function renderNetWorthHistory(){
+  const hist = state.netWorthHistory || [];
+  const chart = $('nwHistoryChart');
+  if(hist.length === 0){
+    chart.innerHTML = '<div class="empty-note">Sin registros todavía — usa el botón de abajo para guardar el primero.</div>';
+    $('nwHistoryTable').innerHTML = '';
+    return;
+  }
+  const max = Math.max(...hist.map(h=>h.value), 1);
+  const w = 600, h = 140, pad = 12;
+  const stepX = hist.length > 1 ? (w-2*pad)/(hist.length-1) : 0;
+  const points = hist.map((pt,i)=>{
+    const x = pad + i*stepX;
+    const y = h - pad - (pt.value/max)*(h-2*pad);
+    return [x,y];
+  });
+  const path = points.map((p,i)=> (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const dots = points.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" style="fill:var(--gold)"></circle>`).join('');
+  chart.innerHTML = `<svg viewBox="0 0 ${w} ${h}" class="nw-chart" role="img" aria-label="Gráfico de patrimonio a lo largo del tiempo">
+    <path d="${path}" style="fill:none;stroke:var(--gold);stroke-width:2"></path>${dots}
+  </svg>`;
+  let rows = '<tr><th>Mes</th><th>Patrimonio</th><th>Variación</th></tr>';
+  hist.forEach((pt,i)=>{
+    const prev = i>0 ? hist[i-1].value : null;
+    const delta = prev!==null ? pt.value - prev : null;
+    rows += `<tr><td>${pt.monthKey}</td><td class="num">${fmt(pt.value)}</td><td class="num">${delta===null?'—':(delta>=0?'+':'')+fmt(delta)}</td></tr>`;
+  });
+  $('nwHistoryTable').innerHTML = rows;
+}
+
+// ---------- Resumen para el bróker (impresión) ----------
+function renderBrokerPrint(){
+  const rows = state.scenarios.map(sc=>({ sc, r: calcScenario(sc) }));
+  const today = new Date().toLocaleDateString('es-AU');
+  let html = `<h1>Resumen de escenarios de compra — Ruta a la Casa</h1><p class="bp-date">Generado el ${today}</p>
+    <table><tr><th>Escenario</th><th>Precio total</th><th>Necesario al contado</th><th>Cuota real</th><th>Cuota banco (+3%)</th><th>LVR</th><th>Estado</th></tr>`;
+  rows.forEach(({sc,r})=>{
+    html += `<tr><td>${sc.name}</td><td>${fmt(r.totalPrice)}</td><td>${fmt(r.totalUpfront)}</td><td>${fmt(r.totalRepayment)}</td><td>${fmt(r.totalStressRepayment)}</td><td>${Math.round(r.avgLVR)}%</td><td>${r.viable?'Viable':'Ajustar'} / ${r.bankApproves?'Banco probable':'Banco: ajustar'}</td></tr>`;
+  });
+  html += `</table><p class="bp-note">Cifras estimadas por la app "Ruta a la Casa" — LMI, stamp duty y tasa bancaria son aproximaciones de referencia, no una cotización. Confirmar con el prestamista y la oficina de rentas antes de decidir.</p>`;
+  $('brokerPrint').innerHTML = html;
+}
+$('printBrokerBtn').addEventListener('click', ()=>{ renderBrokerPrint(); window.print(); });
+
+// ---------- Cuentas desde Excel ----------
+function downloadAccountTemplate(){
+  if(typeof XLSX === 'undefined'){ alert('No se pudo cargar el lector de Excel (revisa tu conexión a internet e intenta de nuevo).'); return; }
+  const wsData = [
+    ['Nombre','Moneda','Saldo','FX'],
+    ['Cuenta ejemplo AUD','AUD',10000,''],
+    ['Cuenta ejemplo COP','COP',20000000,2650],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Cuentas');
+  XLSX.writeFile(wb, 'ruta-a-la-casa-plantilla-cuentas.xlsx');
+}
+$('downloadAccountTemplateBtn').addEventListener('click', downloadAccountTemplate);
+function parseAccountsWorkbook(workbook){
+  const allRows = [];
+  workbook.SheetNames.forEach(name=>{ allRows.push(...XLSX.utils.sheet_to_json(workbook.Sheets[name], { defval:'' })); });
+  const accounts = [];
+  allRows.forEach(row=>{
+    const keys = Object.keys(row);
+    const get = (...names) => { for(const k of keys){ if(names.includes(normText(k))) return row[k]; } return undefined; };
+    const nombre = get('nombre','name','institucion','cuenta');
+    const moneda = normText(get('moneda','currency')) === 'cop' ? 'COP' : 'AUD';
+    const saldo = parseFloat(get('saldo','balance','monto','valor')) || 0;
+    const fx = parseFloat(get('fx','tipodecambio','exchangerate')) || 0;
+    if(!nombre) return;
+    accounts.push({ id: crypto.randomUUID(), name:String(nombre), currency:moneda, balance:saldo, fx });
+  });
+  return accounts;
+}
+$('importAccountExcelBtn').addEventListener('click', ()=>{
+  if(typeof XLSX === 'undefined'){ alert('No se pudo cargar el lector de Excel (revisa tu conexión a internet e intenta de nuevo).'); return; }
+  $('importAccountExcelFile').click();
+});
+$('importAccountExcelFile').addEventListener('change', e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    try{
+      const data = new Uint8Array(ev.target.result);
+      const workbook = XLSX.read(data, { type:'array' });
+      const accounts = parseAccountsWorkbook(workbook);
+      if(accounts.length === 0){
+        alert('No se encontraron filas válidas. Revisa que el archivo tenga columnas Nombre, Moneda, Saldo y FX — descarga la plantilla como referencia.');
+        return;
+      }
+      if(!confirm(`Se encontraron ${accounts.length} cuenta(s). Esto reemplaza las cuentas actuales. ¿Continuar?`)) return;
+      state.accounts = accounts;
+      buildAccounts();
       updateComputed(); save();
     }catch(err){
       console.error(err);
