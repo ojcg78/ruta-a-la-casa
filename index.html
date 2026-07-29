@@ -220,20 +220,22 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
     <div class="subtotal"><span>Total mensual gastos</span><b id="expenseTotal">$0</b></div>
 
     <div class="field" style="margin-top:20px;">
-      <label>Ahorros actuales disponibles (AUD)</label>
-      <input type="number" id="savings" value="0">
-    </div>
-    <div class="field">
       <label>Meses restantes hasta la meta (máx. 12)</label>
       <input type="number" id="months" value="12" min="1" max="12">
     </div>
+    <div class="field">
+      <label>Meses de fondo de emergencia objetivo</label>
+      <input type="number" id="efMonths" value="3" min="1" max="12">
+    </div>
 
     <div style="margin-top:8px;">
+      <div class="stat-row"><span class="lbl">Patrimonio líquido total (todas las cuentas)</span><span class="val" id="savingsTotal">$0</span></div>
       <div class="stat-row"><span class="lbl">Capacidad de ahorro mensual</span><span class="val" id="capMonth">$0</span></div>
       <div class="stat-row"><span class="lbl">Capacidad de ahorro semanal</span><span class="val" id="capWeek">$0</span></div>
       <div class="stat-row total"><span class="lbl">Ahorro proyectado en el horizonte</span><span class="val" id="capTotal">$0</span></div>
-      <div class="stat-row"><span class="lbl">Fondo de emergencia objetivo (3 meses de gastos)</span><span class="val" id="efTarget">$0</span></div>
+      <div class="stat-row"><span class="lbl">Fondo de emergencia objetivo</span><span class="val" id="efTarget">$0</span></div>
       <div class="stat-row"><span class="lbl">Ahorro disponible sobre el fondo de emergencia</span><span class="val" id="efSurplus">$0</span></div>
+      <div class="stat-row total"><span class="lbl">House Readiness Score (0-100)</span><span class="val" id="hrScore">0</span></div>
     </div>
   </div>
 
@@ -246,8 +248,43 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
     <div class="card">
       <table class="compare" id="compareTable"></table>
     </div>
+
+    <div class="sec-title" style="margin-top:34px;"><span class="n">03</span> Patrimonio (todas las cuentas)</div>
+    <div class="card">
+      <div id="accountLines"></div>
+      <div class="addrow"><button class="btn ghost small" id="addAccount">+ Agregar cuenta</button></div>
+    </div>
+
+    <div class="sec-title" style="margin-top:34px;"><span class="n">04</span> Flujo de caja — próximos 12 meses</div>
+    <div class="card">
+      <h2 style="margin-bottom:6px;">Costos puntuales (one-offs)</h2>
+      <div id="oneOffLines"></div>
+      <div class="addrow" style="margin-bottom:14px;"><button class="btn ghost small" id="addOneOff">+ Agregar costo puntual</button></div>
+      <table class="compare" id="cashFlowTable"></table>
+    </div>
+
+    <div class="sec-title" style="margin-top:34px;"><span class="n">05</span> Bitácora de decisiones (&gt;$1,000)</div>
+    <div class="card">
+      <div id="decisionLines"></div>
+      <div class="addrow"><button class="btn ghost small" id="addDecision">+ Agregar decisión</button></div>
+    </div>
+
+    <div class="sec-title" style="margin-top:34px;"><span class="n">06</span> Propiedades visitadas</div>
+    <div class="card">
+      <div id="propertyVisitLines"></div>
+      <div class="addrow"><button class="btn ghost small" id="addVisit">+ Agregar propiedad visitada</button></div>
+    </div>
   </div>
 </div>
+
+<div class="wrap" style="grid-template-columns:1fr; margin-top:22px;">
+  <div class="card">
+    <h2>Respaldo de datos</h2>
+    <p style="font-size:13px;color:#5B6472;margin:0 0 14px 0;">Todo se guarda solo en este navegador. Exporta un respaldo periódicamente o antes de cambiar de computador.</p>
+    <button class="btn" id="exportBtn">Exportar datos (.json)</button>
+    <button class="btn ghost" id="importBtn">Importar datos (.json)</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none;">
+  </div>
 
 <div class="footer-note">Los datos se guardan automáticamente en este dispositivo. Los % de pie, costos de cierre y el LMI estimado son aproximados — confirma cifras exactas con tu bróker hipotecario antes de decidir.</div>
 
@@ -267,10 +304,14 @@ function freqOptions(selected){
 function toMonthly(amount, freq){ return (FREQ[freq]||FREQ.mensual).toMonthly(amount||0); }
 
 let state = {
-  savings:0, months:12,
+  savings:0, months:12, efMonths:3,
   incomes: [],
   expenses: [],
-  scenarios: []
+  scenarios: [],
+  accounts: [],
+  oneOffs: [],
+  decisions: [],
+  propertyVisits: []
 };
 
 function newProperty(){
@@ -324,6 +365,16 @@ async function load(){
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){ state = JSON.parse(raw); }
   }catch(e){ /* sin datos guardados aún */ }
+  if(state.efMonths === undefined) state.efMonths = 3;
+  if(!state.accounts || state.accounts.length === 0){
+    // Migración: si existía el campo antiguo de "ahorros" en una sola cifra, se convierte en una cuenta.
+    state.accounts = [
+      { id: crypto.randomUUID(), name:'Ahorros', currency:'AUD', balance: state.savings||0, fx:0 }
+    ];
+  }
+  if(!state.oneOffs) state.oneOffs = [];
+  if(!state.decisions) state.decisions = [];
+  if(!state.propertyVisits) state.propertyVisits = [];
   if(!state.incomes || state.incomes.length === 0){
     state.incomes = [
       { id: crypto.randomUUID(), name:'Ingreso tuyo', amount:0, freq:'quincenal' },
@@ -363,14 +414,15 @@ async function save(){
 }
 
 function hydrateInputs(){
-  $('savings').value = state.savings;
   $('months').value = state.months;
+  $('efMonths').value = state.efMonths;
 }
 
-['savings','months'].forEach(id=>{
+['months','efMonths'].forEach(id=>{
   $(id).addEventListener('input', e=>{
     state[id] = parseFloat(e.target.value) || 0;
     if(id==='months') state.months = Math.min(12, Math.max(1, Math.round(state.months)));
+    if(id==='efMonths') state.efMonths = Math.max(1, Math.round(state.efMonths));
     updateComputed(); save();
   });
 });
@@ -425,6 +477,35 @@ $('addExpense').addEventListener('click', ()=>{
 function totalMonthly(items){ return items.reduce((sum,i)=> sum + toMonthly(i.amount, i.freq), 0); }
 function capacityMonthly(){ return Math.max(0, totalMonthly(state.incomes) - totalMonthly(state.expenses)); }
 
+// Convierte un saldo a AUD. Si la cuenta está en COP, usa el FX (COP por AUD) ingresado en esa fila.
+function toAUD(amount, currency, fx){
+  if(currency === 'COP') return (fx>0) ? (amount||0) / fx : 0;
+  return amount||0;
+}
+function totalSavingsCash(){
+  return (state.accounts||[]).reduce((sum,a)=> sum + toAUD(a.balance, a.currency, a.fx), 0);
+}
+
+// Puntaje compuesto 0-100, referencial: qué tan lista está la familia para comprar,
+// combinando colchón de emergencia, tasa de ahorro y margen de aprobación bancaria del mejor escenario.
+function houseReadinessScore(){
+  const capMonthly = capacityMonthly();
+  const income = totalMonthly(state.incomes);
+  const savingsRate = income > 0 ? capMonthly / income : 0;
+  const efTarget = totalMonthly(state.expenses) * (state.efMonths||3);
+  const cash = totalSavingsCash();
+  const efScore = efTarget > 0 ? Math.min(1, cash / efTarget) : (cash>0?1:0);
+  const rateScore = Math.min(1, Math.max(0, savingsRate / 0.30)); // 30% de tasa de ahorro = tope de este componente
+  let bankScore = 0;
+  if(state.scenarios && state.scenarios.length){
+    const results = state.scenarios.map(calcScenario);
+    const anyBankOk = results.some(r=>r.bankApproves);
+    const anyViable = results.some(r=>r.viable);
+    bankScore = (anyBankOk?0.6:0) + (anyViable?0.4:0);
+  }
+  return Math.round((efScore*35) + (rateScore*30) + (bankScore*35));
+}
+
 function monthlyRepayment(loanAmount, annualRatePct, years){
   if(loanAmount <= 0) return 0;
   const r = (annualRatePct/100) / 12;
@@ -461,7 +542,7 @@ function calcScenario(sc){
   });
   const totalUpfront = totalDeposit + totalClosing + totalExtra + lmiUpfront + totalStampDuty;
   const avgLVR = totalPrice > 0 ? (totalLoanForLVR / totalPrice) * 100 : 0;
-  const gap = Math.max(0, totalUpfront - state.savings);
+  const gap = Math.max(0, totalUpfront - totalSavingsCash());
   const monthsLeft = state.months || 1;
   const reqMonthly = gap / monthsLeft;
   const reqWeekly = reqMonthly / 4.33;
@@ -609,17 +690,20 @@ function updateComputed(){
   $('expenseTotal').textContent = fmt(totalMonthly(state.expenses));
 
   const capMonthly = capacityMonthly();
+  const savingsCash = totalSavingsCash();
+  $('savingsTotal').textContent = fmt(savingsCash);
   $('capMonth').textContent = fmt(capMonthly);
   $('capWeek').textContent = fmt(capMonthly/4.33);
-  $('capTotal').textContent = fmt(capMonthly * (state.months||0) + (state.savings||0));
+  $('capTotal').textContent = fmt(capMonthly * (state.months||0) + savingsCash);
 
   const expensesNow = totalMonthly(state.expenses);
-  const efTarget = expensesNow * 3;
+  const efTarget = expensesNow * (state.efMonths||3);
   $('efTarget').textContent = fmt(efTarget);
-  const efSurplus = (state.savings||0) - efTarget;
+  const efSurplus = savingsCash - efTarget;
   const efEl = $('efSurplus');
   efEl.textContent = fmt(efSurplus);
   efEl.style.color = efSurplus >= 0 ? 'var(--green)' : 'var(--red)';
+  $('hrScore').textContent = houseReadinessScore();
 
   const rows = state.scenarios.map(sc=>({ sc, r: calcScenario(sc) }));
   rows.forEach(({sc,r})=>{
@@ -666,16 +750,191 @@ function updateComputed(){
     </tr>`;
   });
   $('compareTable').innerHTML = html;
+  if(typeof buildCashFlowTable === 'function' && $('cashFlowTable')) buildCashFlowTable();
 }
+
+// ---------- Cuentas (patrimonio) ----------
+function newAccount(){ return { id: crypto.randomUUID(), name:'Nueva cuenta', currency:'AUD', balance:0, fx:0 }; }
+function accountHTML(a){
+  return `
+    <div class="prop" data-row="${a.id}">
+      <div class="prop-head"><span class="tag">Cuenta</span><button class="rm" data-id="${a.id}" data-role="delAccount" title="Quitar">×</button></div>
+      <div class="grid6">
+        <div class="field"><label>Nombre / institución</label><input value="${a.name}" data-id="${a.id}" data-field="name"></div>
+        <div class="field"><label>Moneda</label><select data-id="${a.id}" data-field="currency"><option value="AUD" ${a.currency==='AUD'?'selected':''}>AUD</option><option value="COP" ${a.currency==='COP'?'selected':''}>COP</option></select></div>
+        <div class="field"><label>Saldo</label><input type="number" value="${a.balance}" data-id="${a.id}" data-field="balance"></div>
+        <div class="field"><label>FX (COP por AUD, solo si es COP)</label><input type="number" value="${a.fx||0}" data-id="${a.id}" data-field="fx"></div>
+      </div>
+    </div>`;
+}
+function buildAccounts(){ $('accountLines').innerHTML = state.accounts.map(accountHTML).join(''); }
+function setupAccountDelegation(){
+  const wrap = $('accountLines');
+  wrap.addEventListener('input', e=>{
+    const t = e.target; if(!t.dataset.field) return;
+    const a = state.accounts.find(x=>x.id===t.dataset.id);
+    a[t.dataset.field] = (t.dataset.field==='balance'||t.dataset.field==='fx') ? (parseFloat(t.value)||0) : t.value;
+    updateComputed(); save();
+  });
+  wrap.addEventListener('click', e=>{
+    if(e.target.dataset.role !== 'delAccount') return;
+    state.accounts = state.accounts.filter(x=>x.id!==e.target.dataset.id);
+    buildAccounts(); updateComputed(); save();
+  });
+}
+$('addAccount').addEventListener('click', ()=>{ state.accounts.push(newAccount()); buildAccounts(); updateComputed(); save(); });
+
+// ---------- Costos puntuales / flujo de caja ----------
+function newOneOff(){ return { id: crypto.randomUUID(), name:'Costo puntual', amount:0, month:1 }; }
+function oneOffHTML(o){
+  return `
+    <div class="prop" data-row="${o.id}">
+      <div class="prop-head"><span class="tag">Costo puntual</span><button class="rm" data-id="${o.id}" data-role="delOneOff" title="Quitar">×</button></div>
+      <div class="grid6">
+        <div class="field"><label>Concepto</label><input value="${o.name}" data-id="${o.id}" data-field="name"></div>
+        <div class="field"><label>Monto (AUD)</label><input type="number" value="${o.amount}" data-id="${o.id}" data-field="amount"></div>
+        <div class="field"><label>Mes (1-12 desde hoy)</label><input type="number" min="1" max="12" value="${o.month}" data-id="${o.id}" data-field="month"></div>
+      </div>
+    </div>`;
+}
+function buildOneOffs(){ $('oneOffLines').innerHTML = state.oneOffs.map(oneOffHTML).join(''); }
+function setupOneOffDelegation(){
+  const wrap = $('oneOffLines');
+  wrap.addEventListener('input', e=>{
+    const t = e.target; if(!t.dataset.field) return;
+    const o = state.oneOffs.find(x=>x.id===t.dataset.id);
+    o[t.dataset.field] = t.dataset.field==='name' ? t.value : (parseFloat(t.value)||0);
+    if(o.month) o.month = Math.min(12, Math.max(1, Math.round(o.month)));
+    updateComputed(); save();
+  });
+  wrap.addEventListener('click', e=>{
+    if(e.target.dataset.role !== 'delOneOff') return;
+    state.oneOffs = state.oneOffs.filter(x=>x.id!==e.target.dataset.id);
+    buildOneOffs(); updateComputed(); save();
+  });
+}
+$('addOneOff').addEventListener('click', ()=>{ state.oneOffs.push(newOneOff()); buildOneOffs(); updateComputed(); save(); });
+
+function buildCashFlowTable(){
+  const income = totalMonthly(state.incomes);
+  const expenses = totalMonthly(state.expenses);
+  let cash = totalSavingsCash();
+  let html = `<tr><th>Mes</th><th>Apertura</th><th>Ingreso</th><th>Gastos</th><th>Puntuales</th><th>Cierre</th></tr>`;
+  for(let m=1; m<=12; m++){
+    const oneOff = state.oneOffs.filter(o=>o.month===m).reduce((s,o)=>s+(o.amount||0),0);
+    const opening = cash;
+    const closing = opening + income - expenses - oneOff;
+    html += `<tr><td>Mes ${m}</td><td class="num">${fmt(opening)}</td><td class="num">${fmt(income)}</td><td class="num">${fmt(expenses)}</td><td class="num">${fmt(oneOff)}</td><td class="num">${fmt(closing)}</td></tr>`;
+    cash = closing;
+  }
+  $('cashFlowTable').innerHTML = html;
+}
+
+// ---------- Bitácora de decisiones ----------
+function newDecision(){ return { id: crypto.randomUUID(), date:'', decision:'', amount:0, notes:'' }; }
+function decisionHTML(d){
+  return `
+    <div class="prop" data-row="${d.id}">
+      <div class="prop-head"><span class="tag">Decisión</span><button class="rm" data-id="${d.id}" data-role="delDecision" title="Quitar">×</button></div>
+      <div class="grid6">
+        <div class="field"><label>Fecha</label><input type="date" value="${d.date}" data-id="${d.id}" data-field="date"></div>
+        <div class="field"><label>Decisión</label><input value="${d.decision}" data-id="${d.id}" data-field="decision"></div>
+        <div class="field"><label>Monto (AUD)</label><input type="number" value="${d.amount}" data-id="${d.id}" data-field="amount"></div>
+        <div class="field"><label>Notas</label><input value="${d.notes}" data-id="${d.id}" data-field="notes"></div>
+      </div>
+    </div>`;
+}
+function buildDecisions(){ $('decisionLines').innerHTML = state.decisions.map(decisionHTML).join(''); }
+function setupDecisionDelegation(){
+  const wrap = $('decisionLines');
+  wrap.addEventListener('input', e=>{
+    const t = e.target; if(!t.dataset.field) return;
+    const d = state.decisions.find(x=>x.id===t.dataset.id);
+    d[t.dataset.field] = t.dataset.field==='amount' ? (parseFloat(t.value)||0) : t.value;
+    save();
+  });
+  wrap.addEventListener('click', e=>{
+    if(e.target.dataset.role !== 'delDecision') return;
+    state.decisions = state.decisions.filter(x=>x.id!==e.target.dataset.id);
+    buildDecisions(); save();
+  });
+}
+$('addDecision').addEventListener('click', ()=>{ state.decisions.push(newDecision()); buildDecisions(); save(); });
+
+// ---------- Propiedades visitadas ----------
+function newVisit(){ return { id: crypto.randomUUID(), address:'', price:0, beds:0, baths:0, score:0, notes:'' }; }
+function visitHTML(v){
+  return `
+    <div class="prop" data-row="${v.id}">
+      <div class="prop-head"><span class="tag">Propiedad visitada</span><button class="rm" data-id="${v.id}" data-role="delVisit" title="Quitar">×</button></div>
+      <div class="grid6">
+        <div class="field"><label>Dirección / link</label><input value="${v.address}" data-id="${v.id}" data-field="address"></div>
+        <div class="field"><label>Precio</label><input type="number" value="${v.price}" data-id="${v.id}" data-field="price"></div>
+        <div class="field"><label>Habitaciones</label><input type="number" value="${v.beds}" data-id="${v.id}" data-field="beds"></div>
+        <div class="field"><label>Baños</label><input type="number" value="${v.baths}" data-id="${v.id}" data-field="baths"></div>
+        <div class="field"><label>Score (0-10)</label><input type="number" min="0" max="10" value="${v.score}" data-id="${v.id}" data-field="score"></div>
+        <div class="field"><label>Notas / pros y contras</label><input value="${v.notes}" data-id="${v.id}" data-field="notes"></div>
+      </div>
+    </div>`;
+}
+function buildVisits(){ $('propertyVisitLines').innerHTML = state.propertyVisits.map(visitHTML).join(''); }
+function setupVisitDelegation(){
+  const wrap = $('propertyVisitLines');
+  wrap.addEventListener('input', e=>{
+    const t = e.target; if(!t.dataset.field) return;
+    const v = state.propertyVisits.find(x=>x.id===t.dataset.id);
+    v[t.dataset.field] = ['address','notes'].includes(t.dataset.field) ? t.value : (parseFloat(t.value)||0);
+    save();
+  });
+  wrap.addEventListener('click', e=>{
+    if(e.target.dataset.role !== 'delVisit') return;
+    state.propertyVisits = state.propertyVisits.filter(x=>x.id!==e.target.dataset.id);
+    buildVisits(); save();
+  });
+}
+$('addVisit').addEventListener('click', ()=>{ state.propertyVisits.push(newVisit()); buildVisits(); save(); });
+
+// ---------- Exportar / importar ----------
+$('exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'ruta-a-la-casa-backup.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+$('importBtn').addEventListener('click', ()=> $('importFile').click());
+$('importFile').addEventListener('change', e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      state = parsed;
+      load();
+    }catch(err){ alert('No se pudo leer el archivo. Verifica que sea un respaldo exportado desde esta misma app.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
 
 function renderAll(){
   buildLines('incomeLines', state.incomes, 'income');
   buildLines('expenseLines', state.expenses, 'expense');
   buildScenarios();
+  buildAccounts();
+  buildOneOffs();
+  buildDecisions();
+  buildVisits();
   setupLineDelegation('incomeLines');
   setupLineDelegation('expenseLines');
   setupScenarioDelegation();
+  setupAccountDelegation();
+  setupOneOffDelegation();
+  setupDecisionDelegation();
+  setupVisitDelegation();
   updateComputed();
+  buildCashFlowTable();
 }
 
 load();
