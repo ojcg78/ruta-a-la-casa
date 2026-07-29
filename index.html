@@ -1,943 +1,204 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Ruta a la Casa</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
-
-:root{
-  --ink:#12203A;
-  --navy:#1B2A4A;
-  --navy-soft:#2C3E63;
-  --sand:#F4EDE0;
-  --paper:#FBF8F2;
-  --gold:#B4862B;
-  --gold-soft:#E4C77E;
-  --green:#3E6B52;
-  --green-soft:#E1EDE5;
-  --red:#A6483F;
-  --red-soft:#F3E1DE;
-  --line:#DDD2BC;
-}
-
-*{box-sizing:border-box;}
-body{
-  margin:0;
-  background:var(--paper);
-  color:var(--ink);
-  font-family:'Inter',sans-serif;
-  padding:0 0 60px 0;
-}
-
-.hero{
-  background:var(--navy);
-  color:var(--sand);
-  padding:38px 28px 60px 28px;
-  position:relative;
-  overflow:hidden;
-}
-.hero::after{
-  content:"";
-  position:absolute;
-  right:-40px; bottom:-60px;
-  width:260px; height:260px;
-  border:1px solid rgba(228,199,126,0.25);
-  border-radius:50%;
-}
-.eyebrow{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:12px;
-  letter-spacing:.14em;
-  text-transform:uppercase;
-  color:var(--gold-soft);
-}
-h1{
-  font-family:'Fraunces',serif;
-  font-weight:600;
-  font-size:clamp(28px,4vw,42px);
-  margin:8px 0 4px 0;
-}
-.hero p{ max-width:560px; color:#CBD3E0; line-height:1.5; margin:0;}
-
-.wrap{
-  max-width:1080px;
-  margin:-32px auto 0 auto;
-  padding:0 24px;
-  display:grid;
-  grid-template-columns:360px 1fr;
-  gap:22px;
-}
-@media (max-width:840px){ .wrap{grid-template-columns:1fr;} }
-
-.card{
-  background:#fff;
-  border:1px solid var(--line);
-  border-radius:14px;
-  padding:22px;
-  box-shadow:0 10px 24px -18px rgba(18,32,58,0.35);
-}
-.card h2{
-  font-family:'Fraunces',serif;
-  font-size:19px;
-  margin:0 0 14px 0;
-  font-weight:600;
-}
-.field{ margin-bottom:14px; }
-.field label{
-  display:block;
-  font-size:12.5px;
-  color:#5B6472;
-  margin-bottom:4px;
-  font-weight:500;
-}
-.field input, .field select{
-  width:100%;
-  padding:9px 10px;
-  border:1px solid var(--line);
-  border-radius:8px;
-  font-size:14.5px;
-  font-family:'Inter',sans-serif;
-  background:var(--paper);
-  color:var(--ink);
-}
-.field input:focus, .field select:focus{ outline:2px solid var(--gold-soft); border-color:var(--gold);}
-
-.stat-row{ display:flex; justify-content:space-between; align-items:baseline; padding:9px 0; border-top:1px solid var(--line); }
-.stat-row:first-of-type{ border-top:none; }
-.stat-row .lbl{ font-size:13px; color:#5B6472; }
-.stat-row .val{ font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:500; }
-.stat-row.total .val{ font-size:19px; color:var(--navy); }
-
-.sticky{ position:sticky; top:16px; }
-
-.sec-title{
-  font-family:'Fraunces',serif;
-  font-size:22px;
-  margin:6px 0 14px 2px;
-  display:flex; align-items:center; gap:10px;
-}
-.sec-title .n{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:12px; color:var(--gold);
-  border:1px solid var(--gold-soft);
-  border-radius:20px; padding:2px 9px;
-}
-
-.scenario{ margin-bottom:18px; }
-.scenario-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; }
-.scenario-head input.name{
-  font-family:'Fraunces',serif; font-size:18px; font-weight:600;
-  border:none; background:transparent; padding:2px 0; width:100%;
-  border-bottom:1px dashed var(--line);
-}
-.scenario-head input.name:focus{ outline:none; border-bottom:1px solid var(--gold); }
-
-.badge{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:11.5px; padding:4px 10px; border-radius:20px; white-space:nowrap;
-}
-.badge.viable{ background:var(--green-soft); color:var(--green); }
-.badge.no{ background:var(--red-soft); color:var(--red); }
-
-.props{ display:flex; flex-direction:column; gap:12px; }
-.prop{
-  border:1px solid var(--line); border-radius:10px; padding:14px;
-  background:var(--paper);
-}
-.prop .prop-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-.prop .prop-head .tag{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--navy-soft); }
-.prop .grid6{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-@media (max-width:760px){ .prop .grid6{ grid-template-columns:1fr 1fr; } }
-.prop .field{ margin-bottom:0; }
-.prop .rm{
-  background:none; border:1px solid var(--line); border-radius:8px;
-  width:32px; height:32px; cursor:pointer; color:var(--red); font-size:16px;
-  align-self:center;
-}
-
-.btn{
-  font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px;
-  border:1px solid var(--navy); background:var(--navy); color:#fff;
-  padding:9px 16px; border-radius:8px; cursor:pointer;
-}
-.btn.ghost{ background:transparent; color:var(--navy); }
-.btn.small{ padding:6px 12px; font-size:12.5px; }
-.btn.danger{ border-color:var(--red); color:var(--red); background:transparent; }
-
-.gauge-wrap{ margin-top:14px; }
-.gauge-track{
-  height:10px; border-radius:6px; background:var(--sand); overflow:hidden; position:relative;
-  border:1px solid var(--line);
-}
-.gauge-fill{ height:100%; border-radius:6px; }
-.gauge-labels{ display:flex; justify-content:space-between; font-size:12px; color:#5B6472; margin-top:5px; font-family:'IBM Plex Mono',monospace; }
-
-.results-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:16px; }
-@media (max-width:760px){ .results-grid{ grid-template-columns:1fr 1fr; } }
-.rbox{ background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
-.rbox .lbl{ font-size:11.5px; color:#5B6472; text-transform:uppercase; letter-spacing:.04em;}
-.rbox .val{ font-family:'IBM Plex Mono',monospace; font-size:17px; margin-top:3px; font-weight:500; color:var(--navy);}
-
-table.compare{ width:100%; border-collapse:collapse; margin-top:6px; font-size:13.5px; }
-table.compare th, table.compare td{ padding:10px 12px; text-align:left; border-bottom:1px solid var(--line); }
-table.compare th{ font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; color:#5B6472; letter-spacing:.04em; }
-table.compare tr.best td{ background:var(--green-soft); }
-table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
-
-.addrow{ text-align:center; margin-top:6px; }
-.footer-note{ text-align:center; color:#8A93A3; font-size:12.5px; margin-top:26px; }
-
-.line{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--line); }
-.line .sub-row{ display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end; }
-.line .field{ margin-bottom:0; }
-.line .rm{
-  background:none; border:1px solid var(--line); border-radius:8px;
-  width:36px; height:36px; cursor:pointer; color:var(--red); font-size:16px;
-}
-.subtotal{ display:flex; justify-content:space-between; padding-top:10px; margin-top:6px; border-top:1px solid var(--line); font-family:'IBM Plex Mono',monospace; font-size:14px; }
-.subtotal b{ color:var(--navy); }
-</style>
-</head>
-<body>
-
-<div class="hero">
-  <div class="eyebrow">Plan financiero conjunto</div>
-  <h1>Ruta a la Casa</h1>
-  <p>Ingresen su presupuesto como unidad familiar, arma escenarios de compra y descubre qué tan viable es cada uno dentro de tu horizonte de 12 meses.</p>
-</div>
-
-<div class="wrap">
-  <div class="card sticky">
-    <h2>Ingresos</h2>
-    <div id="incomeLines"></div>
-    <div class="addrow" style="margin-bottom:14px;"><button class="btn ghost small" id="addIncome">+ Agregar ingreso</button></div>
-    <div class="subtotal"><span>Total mensual ingresos</span><b id="incomeTotal">$0</b></div>
-
-    <h2 style="margin-top:22px;">Gastos</h2>
-    <div id="expenseLines"></div>
-    <div class="addrow" style="margin-bottom:14px;"><button class="btn ghost small" id="addExpense">+ Agregar gasto</button></div>
-    <div class="subtotal"><span>Total mensual gastos</span><b id="expenseTotal">$0</b></div>
-
-    <div class="field" style="margin-top:20px;">
-      <label>Meses restantes hasta la meta (máx. 12)</label>
-      <input type="number" id="months" value="12" min="1" max="12">
-    </div>
-    <div class="field">
-      <label>Meses de fondo de emergencia objetivo</label>
-      <input type="number" id="efMonths" value="3" min="1" max="12">
-    </div>
-
-    <div style="margin-top:8px;">
-      <div class="stat-row"><span class="lbl">Patrimonio líquido total (todas las cuentas)</span><span class="val" id="savingsTotal">$0</span></div>
-      <div class="stat-row"><span class="lbl">Capacidad de ahorro mensual</span><span class="val" id="capMonth">$0</span></div>
-      <div class="stat-row"><span class="lbl">Capacidad de ahorro semanal</span><span class="val" id="capWeek">$0</span></div>
-      <div class="stat-row total"><span class="lbl">Ahorro proyectado en el horizonte</span><span class="val" id="capTotal">$0</span></div>
-      <div class="stat-row"><span class="lbl">Fondo de emergencia objetivo</span><span class="val" id="efTarget">$0</span></div>
-      <div class="stat-row"><span class="lbl">Ahorro disponible sobre el fondo de emergencia</span><span class="val" id="efSurplus">$0</span></div>
-      <div class="stat-row total"><span class="lbl">House Readiness Score (0-100)</span><span class="val" id="hrScore">0</span></div>
-    </div>
-  </div>
-
-  <div>
-    <div class="sec-title"><span class="n">01</span> Escenarios de compra</div>
-    <div id="scenarios"></div>
-    <div class="addrow"><button class="btn ghost" id="addScenario">+ Agregar escenario</button></div>
-
-    <div class="sec-title" style="margin-top:34px;"><span class="n">02</span> Comparación</div>
-    <div class="card">
-      <table class="compare" id="compareTable"></table>
-    </div>
-
-    <div class="sec-title" style="margin-top:34px;"><span class="n">03</span> Patrimonio (todas las cuentas)</div>
-    <div class="card">
-      <div id="accountLines"></div>
-      <div class="addrow"><button class="btn ghost small" id="addAccount">+ Agregar cuenta</button></div>
-    </div>
-
-    <div class="sec-title" style="margin-top:34px;"><span class="n">04</span> Flujo de caja — próximos 12 meses</div>
-    <div class="card">
-      <h2 style="margin-bottom:6px;">Costos puntuales (one-offs)</h2>
-      <div id="oneOffLines"></div>
-      <div class="addrow" style="margin-bottom:14px;"><button class="btn ghost small" id="addOneOff">+ Agregar costo puntual</button></div>
-      <table class="compare" id="cashFlowTable"></table>
-    </div>
-
-    <div class="sec-title" style="margin-top:34px;"><span class="n">05</span> Bitácora de decisiones (&gt;$1,000)</div>
-    <div class="card">
-      <div id="decisionLines"></div>
-      <div class="addrow"><button class="btn ghost small" id="addDecision">+ Agregar decisión</button></div>
-    </div>
-
-    <div class="sec-title" style="margin-top:34px;"><span class="n">06</span> Propiedades visitadas</div>
-    <div class="card">
-      <div id="propertyVisitLines"></div>
-      <div class="addrow"><button class="btn ghost small" id="addVisit">+ Agregar propiedad visitada</button></div>
-    </div>
-  </div>
-</div>
-
-<div class="wrap" style="grid-template-columns:1fr; margin-top:22px;">
-  <div class="card">
-    <h2>Respaldo de datos</h2>
-    <p style="font-size:13px;color:#5B6472;margin:0 0 14px 0;">Todo se guarda solo en este navegador. Exporta un respaldo periódicamente o antes de cambiar de computador.</p>
-    <button class="btn" id="exportBtn">Exportar datos (.json)</button>
-    <button class="btn ghost" id="importBtn">Importar datos (.json)</button>
-    <input type="file" id="importFile" accept="application/json" style="display:none;">
-  </div>
-
-<div class="footer-note">Los datos se guardan automáticamente en este dispositivo. Los % de pie, costos de cierre y el LMI estimado son aproximados — confirma cifras exactas con tu bróker hipotecario antes de decidir.</div>
-
-<script>
-const fmt = n => '$' + (Math.round(n)).toLocaleString('en-AU');
-const $ = id => document.getElementById(id);
-
-const FREQ = {
-  semanal:   { label:'Semanal',   toMonthly: v => v * 4.348 },
-  quincenal: { label:'Quincenal', toMonthly: v => v * 2.174 },
-  mensual:   { label:'Mensual',   toMonthly: v => v },
-  anual:     { label:'Anual',     toMonthly: v => v / 12 },
-};
-function freqOptions(selected){
-  return Object.keys(FREQ).map(k=>`<option value="${k}" ${k===selected?'selected':''}>${FREQ[k].label}</option>`).join('');
-}
-function toMonthly(amount, freq){ return (FREQ[freq]||FREQ.mensual).toMonthly(amount||0); }
-
-let state = {
-  savings:0, months:12, efMonths:3,
-  incomes: [],
-  expenses: [],
-  scenarios: [],
-  accounts: [],
-  oneOffs: [],
-  decisions: [],
-  propertyVisits: []
-};
-
-function newProperty(){
-  return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30, financeLMI:true, homeGuarantee:false, stampState:'NSW', firstHomeBuyer:false };
-}
-function newScenario(name){
-  return { id: crypto.randomUUID(), name: name || 'Escenario', properties:[newProperty()], rentReplace:0 };
-}
-// Buffer de servicio que APRA exige a los bancos: evalúan tu capacidad de pago
-// a la tasa real + este colchón, no a la tasa real. Vigente en 3 puntos porcentuales.
-const SERVICEABILITY_BUFFER = 3.0;
-// Estimación aproximada de LMI (Lenders Mortgage Insurance) por bandas de LVR.
-// Son tasas de referencia de mercado, no una cotización — el premio real depende
-// del asegurador, el prestamista y el tamaño exacto del préstamo. Confirma con tu bróker.
-function estimateLMI(loanAmount, lvrPct){
-  if(lvrPct <= 80) return 0;
-  let rate;
-  if(lvrPct <= 85) rate = 0.006;
-  else if(lvrPct <= 90) rate = 0.013;
-  else if(lvrPct <= 95) rate = 0.028;
-  else rate = 0.04;
-  return loanAmount * rate;
-}
-// Stamp duty (conveyance duty) estimado por estado/territorio — tasa efectiva aproximada
-// sobre el precio para propiedad residencial establecida, comprador ocupante.
-// Son promedios de referencia, NO el cálculo exacto por tramos de cada revenue office.
-// Confirma la cifra real con la oficina de rentas de tu estado/territorio antes de decidir.
-const STAMP_DUTY_RATE = { NSW:0.045, VIC:0.055, QLD:0.038, WA:0.049, SA:0.043, TAS:0.040, NT:0.049, ACT:0.045 };
-function estimateStampDuty(price, stateCode, firstHomeBuyer){
-  let duty = price * (STAMP_DUTY_RATE[stateCode] || 0.045);
-  if(firstHomeBuyer){
-    if(stateCode === 'ACT'){
-      // Home Buyer Concession Scheme: exento desde 1 jul 2026, sin tope de ingreso ni de precio,
-      // para quienes no han tenido propiedad en los últimos 5 años. Confirma elegibilidad exacta.
-      duty = 0;
-    } else if(stateCode === 'NSW'){
-      // Exención total hasta $800k, concesión decreciente hasta $1M (aproximado).
-      if(price <= 800000) duty = 0;
-      else if(price <= 1000000) duty = duty * ((price - 800000) / 200000);
+{
+  "savings": 93154.5,
+  "months": 12,
+  "efMonths": 3,
+  "incomes": [
+    {
+      "id": "inc-1",
+      "name": "Oscar - salario",
+      "amount": 1650,
+      "freq": "semanal"
+    },
+    {
+      "id": "inc-2",
+      "name": "Lilian - Dimeo",
+      "amount": 2688,
+      "freq": "quincenal"
+    },
+    {
+      "id": "inc-3",
+      "name": "Sanitary Bin",
+      "amount": 122,
+      "freq": "mensual"
+    },
+    {
+      "id": "inc-4",
+      "name": "Mable",
+      "amount": 230,
+      "freq": "mensual"
     }
-    // Otros estados/territorios tienen sus propias concesiones de primer comprador
-    // que no están modeladas aquí — confirma con la oficina de rentas correspondiente.
-  }
-  return Math.max(0, duty);
-}
-
-const STORAGE_KEY = 'ruta-a-la-casa-state';
-
-async function load(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){ state = JSON.parse(raw); }
-  }catch(e){ /* sin datos guardados aún */ }
-  if(state.efMonths === undefined) state.efMonths = 3;
-  if(!state.accounts || state.accounts.length === 0){
-    // Migración: si existía el campo antiguo de "ahorros" en una sola cifra, se convierte en una cuenta.
-    state.accounts = [
-      { id: crypto.randomUUID(), name:'Ahorros', currency:'AUD', balance: state.savings||0, fx:0 }
-    ];
-  }
-  if(!state.oneOffs) state.oneOffs = [];
-  if(!state.decisions) state.decisions = [];
-  if(!state.propertyVisits) state.propertyVisits = [];
-  if(!state.incomes || state.incomes.length === 0){
-    state.incomes = [
-      { id: crypto.randomUUID(), name:'Ingreso tuyo', amount:0, freq:'quincenal' },
-      { id: crypto.randomUUID(), name:'Ingreso de tu pareja', amount:0, freq:'quincenal' }
-    ];
-  }
-  if(!state.expenses || state.expenses.length === 0){
-    state.expenses = [
-      { id: crypto.randomUUID(), name:'Arriendo / vivienda', amount:0, freq:'mensual' },
-      { id: crypto.randomUUID(), name:'Supermercado', amount:0, freq:'semanal' },
-      { id: crypto.randomUUID(), name:'Cuentas y servicios', amount:0, freq:'mensual' }
-    ];
-  }
-  if(state.scenarios){
-    state.scenarios.forEach(sc=>{
-      if(sc.rentReplace === undefined) sc.rentReplace = 0;
-      (sc.properties||[]).forEach(p=>{
-        if(p.financeLMI === undefined) p.financeLMI = true;
-        if(p.homeGuarantee === undefined) p.homeGuarantee = false;
-        if(p.stampState === undefined) p.stampState = 'NSW';
-        if(p.firstHomeBuyer === undefined) p.firstHomeBuyer = false;
-      });
-    });
-  }
-  if(!state.scenarios || state.scenarios.length === 0){
-    state.scenarios = [
-      { id: crypto.randomUUID(), name:'Casa familiar', properties:[newProperty()] },
-      { id: crypto.randomUUID(), name:'2 Departamentos (vivir + invertir)', properties:[newProperty(), newProperty()] }
-    ];
-  }
-  hydrateInputs();
-  renderAll();
-}
-
-async function save(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){ console.error('No se pudo guardar', e); }
-}
-
-function hydrateInputs(){
-  $('months').value = state.months;
-  $('efMonths').value = state.efMonths;
-}
-
-['months','efMonths'].forEach(id=>{
-  $(id).addEventListener('input', e=>{
-    state[id] = parseFloat(e.target.value) || 0;
-    if(id==='months') state.months = Math.min(12, Math.max(1, Math.round(state.months)));
-    if(id==='efMonths') state.efMonths = Math.max(1, Math.round(state.efMonths));
-    updateComputed(); save();
-  });
-});
-
-function lineHTML(item, kind){
-  return `
-    <div class="line" data-row="${item.id}">
-      <div class="field"><label>Concepto</label><input value="${item.name}" data-kind="${kind}" data-id="${item.id}" data-field="name"></div>
-      <div class="sub-row">
-        <div class="field"><label>Monto</label><input type="number" value="${item.amount}" data-kind="${kind}" data-id="${item.id}" data-field="amount"></div>
-        <div class="field"><label>Frecuencia</label><select data-kind="${kind}" data-id="${item.id}" data-field="freq">${freqOptions(item.freq)}</select></div>
-        <button class="rm" data-kind="${kind}" data-id="${item.id}" data-role="delLine" title="Quitar">×</button>
-      </div>
-    </div>`;
-}
-
-function buildLines(containerId, items, kind){
-  $(containerId).innerHTML = items.map(i=>lineHTML(i,kind)).join('');
-}
-
-// Delegated listeners: attached once, survive innerHTML rebuilds of the container itself.
-function setupLineDelegation(containerId){
-  const wrap = $(containerId);
-  wrap.addEventListener('input', e=>{
-    const t = e.target;
-    if(!t.dataset.field) return;
-    const list = t.dataset.kind === 'income' ? state.incomes : state.expenses;
-    const item = list.find(i=>i.id === t.dataset.id);
-    item[t.dataset.field] = t.dataset.field === 'amount' ? (parseFloat(t.value)||0) : t.value;
-    updateComputed(); save();
-  });
-  wrap.addEventListener('click', e=>{
-    if(e.target.dataset.role !== 'delLine') return;
-    const key = e.target.dataset.kind === 'income' ? 'incomes' : 'expenses';
-    state[key] = state[key].filter(i=>i.id !== e.target.dataset.id);
-    buildLines(containerId, state[key], e.target.dataset.kind);
-    updateComputed(); save();
-  });
-}
-
-$('addIncome').addEventListener('click', ()=>{
-  state.incomes.push({ id: crypto.randomUUID(), name:'Nuevo ingreso', amount:0, freq:'mensual' });
-  buildLines('incomeLines', state.incomes, 'income');
-  updateComputed(); save();
-});
-$('addExpense').addEventListener('click', ()=>{
-  state.expenses.push({ id: crypto.randomUUID(), name:'Nuevo gasto', amount:0, freq:'mensual' });
-  buildLines('expenseLines', state.expenses, 'expense');
-  updateComputed(); save();
-});
-
-function totalMonthly(items){ return items.reduce((sum,i)=> sum + toMonthly(i.amount, i.freq), 0); }
-function capacityMonthly(){ return Math.max(0, totalMonthly(state.incomes) - totalMonthly(state.expenses)); }
-
-// Convierte un saldo a AUD. Si la cuenta está en COP, usa el FX (COP por AUD) ingresado en esa fila.
-function toAUD(amount, currency, fx){
-  if(currency === 'COP') return (fx>0) ? (amount||0) / fx : 0;
-  return amount||0;
-}
-function totalSavingsCash(){
-  return (state.accounts||[]).reduce((sum,a)=> sum + toAUD(a.balance, a.currency, a.fx), 0);
-}
-
-// Puntaje compuesto 0-100, referencial: qué tan lista está la familia para comprar,
-// combinando colchón de emergencia, tasa de ahorro y margen de aprobación bancaria del mejor escenario.
-function houseReadinessScore(){
-  const capMonthly = capacityMonthly();
-  const income = totalMonthly(state.incomes);
-  const savingsRate = income > 0 ? capMonthly / income : 0;
-  const efTarget = totalMonthly(state.expenses) * (state.efMonths||3);
-  const cash = totalSavingsCash();
-  const efScore = efTarget > 0 ? Math.min(1, cash / efTarget) : (cash>0?1:0);
-  const rateScore = Math.min(1, Math.max(0, savingsRate / 0.30)); // 30% de tasa de ahorro = tope de este componente
-  let bankScore = 0;
-  if(state.scenarios && state.scenarios.length){
-    const results = state.scenarios.map(calcScenario);
-    const anyBankOk = results.some(r=>r.bankApproves);
-    const anyViable = results.some(r=>r.viable);
-    bankScore = (anyBankOk?0.6:0) + (anyViable?0.4:0);
-  }
-  return Math.round((efScore*35) + (rateScore*30) + (bankScore*35));
-}
-
-function monthlyRepayment(loanAmount, annualRatePct, years){
-  if(loanAmount <= 0) return 0;
-  const r = (annualRatePct/100) / 12;
-  const n = years * 12;
-  if(n <= 0) return 0;
-  if(r === 0) return loanAmount / n;
-  return loanAmount * r * Math.pow(1+r,n) / (Math.pow(1+r,n) - 1);
-}
-
-function calcScenario(sc){
-  let totalPrice=0, totalDeposit=0, totalClosing=0, totalExtra=0, totalRepayment=0, totalStressRepayment=0;
-  let totalLoanForLVR=0, totalLMI=0, lmiUpfront=0, hgCount=0, totalStampDuty=0;
-  sc.properties.forEach(p=>{
-    totalPrice += p.price;
-    const depositAmt = p.price * (p.deposit/100);
-    totalDeposit += depositAmt;
-    totalClosing += p.price * (p.closing/100);
-    totalExtra += p.extra;
-    totalStampDuty += estimateStampDuty(p.price, p.stampState, p.firstHomeBuyer);
-    const loanAmount = p.price - depositAmt;
-    const lvr = p.price > 0 ? (loanAmount / p.price) * 100 : 0;
-    // El Home Guarantee Scheme reemplaza el LMI con una garantía del gobierno: no se paga LMI.
-    const lmi = p.homeGuarantee ? 0 : estimateLMI(loanAmount, lvr);
-    if(p.homeGuarantee) hgCount++;
-    totalLoanForLVR += loanAmount;
-    totalLMI += lmi;
-    // Practica habitual: el LMI se capitaliza dentro del credito (sube la cuota un poco)
-    // en vez de pagarse al contado. Si el usuario prefiere pagarlo al contado, se suma al upfront.
-    const financedLoan = p.financeLMI ? loanAmount + lmi : loanAmount;
-    if(!p.financeLMI) lmiUpfront += lmi;
-    totalRepayment += monthlyRepayment(financedLoan, p.rate, p.years);
-    // El banco no te evalúa a la tasa real, sino a la tasa real + buffer de servicio (APRA).
-    totalStressRepayment += monthlyRepayment(financedLoan, p.rate + SERVICEABILITY_BUFFER, p.years);
-  });
-  const totalUpfront = totalDeposit + totalClosing + totalExtra + lmiUpfront + totalStampDuty;
-  const avgLVR = totalPrice > 0 ? (totalLoanForLVR / totalPrice) * 100 : 0;
-  const gap = Math.max(0, totalUpfront - totalSavingsCash());
-  const monthsLeft = state.months || 1;
-  const reqMonthly = gap / monthsLeft;
-  const reqWeekly = reqMonthly / 4.33;
-  const capMonthly = capacityMonthly();
-  const viable = reqMonthly <= capMonthly;
-  const pct = capMonthly > 0 ? Math.min(150, (reqMonthly/capMonthly)*100) : (reqMonthly>0?150:0);
-  const repaymentWeekly = totalRepayment / 4.33;
-  const rentReplace = sc.rentReplace || 0;
-  // Al comprar, el arriendo actual (si aplica) deja de pagarse: se suma de vuelta antes de restar la cuota nueva.
-  const incomeAfterRepayment = capMonthly + rentReplace - totalRepayment;
-  const repaymentFits = incomeAfterRepayment >= 0;
-  const stressIncomeAfterRepayment = capMonthly + rentReplace - totalStressRepayment;
-  const bankApproves = stressIncomeAfterRepayment >= 0;
-  const stressRepaymentWeekly = totalStressRepayment / 4.33;
-  return { totalPrice, totalUpfront, gap, reqMonthly, reqWeekly, viable, pct, capMonthly,
-    totalRepayment, repaymentWeekly, incomeAfterRepayment, repaymentFits,
-    rentReplace, totalStressRepayment, stressRepaymentWeekly, stressIncomeAfterRepayment, bankApproves,
-    avgLVR, totalLMI, hgCount, totalStampDuty };
-}
-
-function propHTML(sc, p, idx){
-  return `
-    <div class="prop" data-row="${idx}">
-      <div class="prop-head">
-        <span class="tag">Propiedad ${idx+1}</span>
-        <button class="rm" data-sc="${sc.id}" data-idx="${idx}" data-role="delProp" title="Quitar propiedad">×</button>
-      </div>
-      <div class="grid6">
-        <div class="field"><label>Precio</label><input type="number" value="${p.price}" data-sc="${sc.id}" data-idx="${idx}" data-field="price"></div>
-        <div class="field"><label>Pie (%)</label><input type="number" value="${p.deposit}" data-sc="${sc.id}" data-idx="${idx}" data-field="deposit"></div>
-        <div class="field"><label>Costos de cierre (%)</label><input type="number" value="${p.closing}" data-sc="${sc.id}" data-idx="${idx}" data-field="closing"></div>
-        <div class="field"><label>Otros costos fijos</label><input type="number" value="${p.extra}" data-sc="${sc.id}" data-idx="${idx}" data-field="extra"></div>
-        <div class="field"><label>Tasa interés anual (%)</label><input type="number" step="0.1" value="${p.rate}" data-sc="${sc.id}" data-idx="${idx}" data-field="rate"></div>
-        <div class="field"><label>Plazo del crédito (años)</label><input type="number" value="${p.years}" data-sc="${sc.id}" data-idx="${idx}" data-field="years"></div>
-        <div class="field"><label>Financiar LMI en el crédito (si pie &lt;20%)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="financeLMI"><option value="true" ${p.financeLMI?'selected':''}>Sí — capitalizarlo en la cuota</option><option value="false" ${!p.financeLMI?'selected':''}>No — pagarlo al contado</option></select></div>
-        <div class="field"><label>Home Guarantee Scheme (5% pie, sin LMI)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="homeGuarantee"><option value="false" ${!p.homeGuarantee?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.homeGuarantee?'selected':''}>Sí — elegible confirmado</option></select></div>
-        <div class="field"><label>Estado / Territorio</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="stampState">${['NSW','VIC','QLD','WA','SA','TAS','NT','ACT'].map(s=>`<option value="${s}" ${p.stampState===s?'selected':''}>${s}</option>`).join('')}</select></div>
-        <div class="field"><label>Primer comprador (concesión stamp duty)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="firstHomeBuyer"><option value="false" ${!p.firstHomeBuyer?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.firstHomeBuyer?'selected':''}>Sí — elegible confirmado</option></select></div>
-      </div>
-    </div>`;
-}
-
-function scenarioHTML(sc){
-  return `
-    <div class="card scenario" id="scenario-${sc.id}">
-      <div class="scenario-head">
-        <input class="name" value="${sc.name}" data-id="${sc.id}" data-role="name">
-        <span class="badge" id="badge-${sc.id}">—</span>
-        <button class="btn danger small" data-id="${sc.id}" data-role="delScenario">Eliminar</button>
-      </div>
-      <div class="props" id="props-${sc.id}">${sc.properties.map((p,idx)=>propHTML(sc,p,idx)).join('')}</div>
-      <div class="addrow"><button class="btn ghost small" data-id="${sc.id}" data-role="addProp">+ Agregar propiedad</button></div>
-      <div class="field" style="margin-top:14px;">
-        <label>Arriendo mensual que dejarías de pagar al comprar (si aplica)</label>
-        <input type="number" value="${sc.rentReplace||0}" data-id="${sc.id}" data-role="rentReplace">
-      </div>
-      <div class="results-grid">
-        <div class="rbox"><div class="lbl">Total propiedades</div><div class="val" id="tp-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Necesario al contado</div><div class="val" id="tu-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Ahorro mensual requerido</div><div class="val" id="rm-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Ahorro semanal requerido</div><div class="val" id="rw-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Cuota crédito mensual</div><div class="val" id="cm-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Cuota crédito semanal</div><div class="val" id="cw-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Ingreso libre tras cuota</div><div class="val" id="ia-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Cuota evaluación bancaria (+3%)</div><div class="val" id="cs-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">LVR promedio</div><div class="val" id="lvr-${sc.id}">0%</div></div>
-        <div class="rbox"><div class="lbl">LMI estimado (aprox.)</div><div class="val" id="lmi-${sc.id}">$0</div></div>
-        <div class="rbox"><div class="lbl">Stamp duty estimado (aprox.)</div><div class="val" id="sd-${sc.id}">$0</div></div>
-      </div>
-      <div class="gauge-wrap">
-        <div class="gauge-track"><div class="gauge-fill" id="gf-${sc.id}" style="width:0%;"></div></div>
-        <div class="gauge-labels"><span>0</span><span id="gl-${sc.id}">Requerido vs. capacidad mensual</span><span>100%+</span></div>
-      </div>
-      <div class="stat-row" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;">
-        <span class="lbl">Aprobación bancaria probable (buffer APRA +3%)</span>
-        <span class="badge" id="bank-${sc.id}">—</span>
-      </div>
-      <div class="stat-row" id="hgnote-${sc.id}" style="display:none; padding-top:8px;">
-        <span class="lbl" style="color:var(--gold);">⚠ Este escenario asume Home Guarantee Scheme — confirma que califican (ingresos, primera compra) y que el precio está bajo el tope de tu región antes de descartar el LMI.</span>
-      </div>
-    </div>`;
-}
-
-function buildScenarios(){
-  $('scenarios').innerHTML = state.scenarios.map(scenarioHTML).join('');
-}
-
-function setupScenarioDelegation(){
-  const wrap = $('scenarios');
-  wrap.addEventListener('input', e=>{
-    const t = e.target;
-    if(t.dataset.role === 'name'){
-      const sc = state.scenarios.find(s=>s.id===t.dataset.id);
-      sc.name = t.value;
-      save();
-      return;
+  ],
+  "expenses": [
+    {
+      "id": "exp-1",
+      "name": "Arriendo",
+      "amount": 490,
+      "freq": "semanal"
+    },
+    {
+      "id": "exp-2",
+      "name": "Seguro médico privado",
+      "amount": 56,
+      "freq": "semanal"
+    },
+    {
+      "id": "exp-3",
+      "name": "Comida Lilo",
+      "amount": 54,
+      "freq": "quincenal"
+    },
+    {
+      "id": "exp-4",
+      "name": "Seguro del carro",
+      "amount": 61.12,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-5",
+      "name": "YouTube",
+      "amount": 10,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-6",
+      "name": "Seguro Lilo",
+      "amount": 119.59,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-7",
+      "name": "Colombia - colegio",
+      "amount": 600,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-8",
+      "name": "Colombia - papá e hija",
+      "amount": 1300,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-9",
+      "name": "Celular + internet",
+      "amount": 96,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-10",
+      "name": "Mercado",
+      "amount": 1300,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-11",
+      "name": "Gym Oscar",
+      "amount": 81,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-12",
+      "name": "Gym Parliament",
+      "amount": 47,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-13",
+      "name": "Proteína",
+      "amount": 264,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-14",
+      "name": "Electricidad",
+      "amount": 117,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-15",
+      "name": "Regalos",
+      "amount": 100,
+      "freq": "mensual"
+    },
+    {
+      "id": "exp-16",
+      "name": "Combustible",
+      "amount": 80,
+      "freq": "quincenal"
     }
-    if(t.dataset.role === 'rentReplace'){
-      const sc = state.scenarios.find(s=>s.id===t.dataset.id);
-      sc.rentReplace = parseFloat(t.value) || 0;
-      updateComputed(); save();
-      return;
+  ],
+  "accounts": [
+    {
+      "id": "acc-1",
+      "name": "Oscar - ING Orange Everyday",
+      "currency": "AUD",
+      "balance": 2700,
+      "fx": 0
+    },
+    {
+      "id": "acc-2",
+      "name": "Lilian - ING Orange Everyday",
+      "currency": "AUD",
+      "balance": 3371.52,
+      "fx": 0
+    },
+    {
+      "id": "acc-3",
+      "name": "Oscar - Rabobank High Interest Savings",
+      "currency": "AUD",
+      "balance": 21875.38,
+      "fx": 0
+    },
+    {
+      "id": "acc-4",
+      "name": "Lilian - Rabobank High Interest Savings",
+      "currency": "AUD",
+      "balance": 40400,
+      "fx": 0
+    },
+    {
+      "id": "acc-5",
+      "name": "Oscar - Macquarie Savings",
+      "currency": "AUD",
+      "balance": 24275.92,
+      "fx": 0
+    },
+    {
+      "id": "acc-6",
+      "name": "Lilian - Commonwealth Smart Access",
+      "currency": "AUD",
+      "balance": 531.68,
+      "fx": 0
     }
-    if(t.dataset.field && t.dataset.sc){
-      const sc = state.scenarios.find(s=>s.id===t.dataset.sc);
-      const idx = parseInt(t.dataset.idx);
-      if(t.dataset.field === 'financeLMI' || t.dataset.field === 'homeGuarantee' || t.dataset.field === 'firstHomeBuyer'){
-        sc.properties[idx][t.dataset.field] = (t.value === 'true');
-      } else if(t.dataset.field === 'stampState'){
-        sc.properties[idx].stampState = t.value;
-      } else {
-        sc.properties[idx][t.dataset.field] = parseFloat(t.value) || 0;
-      }
-      updateComputed(); save();
+  ],
+  "oneOffs": [
+    {
+      "id": "oo-1",
+      "name": "Visa 191 (estimado)",
+      "amount": 3750,
+      "month": 2
     }
-  });
-  wrap.addEventListener('click', e=>{
-    const role = e.target.dataset.role;
-    if(role === 'delScenario'){
-      state.scenarios = state.scenarios.filter(s=>s.id!==e.target.dataset.id);
-      buildScenarios(); updateComputed(); save();
-    } else if(role === 'addProp'){
-      const sc = state.scenarios.find(s=>s.id===e.target.dataset.id);
-      sc.properties.push(newProperty());
-      $('props-'+sc.id).innerHTML = sc.properties.map((p,idx)=>propHTML(sc,p,idx)).join('');
-      updateComputed(); save();
-    } else if(role === 'delProp'){
-      const sc = state.scenarios.find(s=>s.id===e.target.dataset.sc);
-      sc.properties.splice(parseInt(e.target.dataset.idx),1);
-      if(sc.properties.length===0) sc.properties.push(newProperty());
-      $('props-'+sc.id).innerHTML = sc.properties.map((p,idx)=>propHTML(sc,p,idx)).join('');
-      updateComputed(); save();
+  ],
+  "decisions": [],
+  "propertyVisits": [],
+  "scenarios": [
+    {
+      "id": "sc-1",
+      "name": "Casa familiar (base $1M / 15%)",
+      "rentReplace": 2123.33,
+      "properties": [
+        {
+          "price": 1000000,
+          "deposit": 15,
+          "closing": 1.5,
+          "extra": 2000,
+          "rate": 6.0,
+          "years": 30,
+          "financeLMI": true,
+          "homeGuarantee": false,
+          "stampState": "ACT",
+          "firstHomeBuyer": false
+        }
+      ]
     }
-  });
+  ]
 }
-
-$('addScenario').addEventListener('click', ()=>{
-  state.scenarios.push(newScenario('Nuevo escenario'));
-  buildScenarios(); updateComputed(); save();
-});
-
-// Recomputes all derived numbers and updates existing DOM nodes by id — never touches inputs, so focus is preserved while typing.
-function updateComputed(){
-  $('incomeTotal').textContent = fmt(totalMonthly(state.incomes));
-  $('expenseTotal').textContent = fmt(totalMonthly(state.expenses));
-
-  const capMonthly = capacityMonthly();
-  const savingsCash = totalSavingsCash();
-  $('savingsTotal').textContent = fmt(savingsCash);
-  $('capMonth').textContent = fmt(capMonthly);
-  $('capWeek').textContent = fmt(capMonthly/4.33);
-  $('capTotal').textContent = fmt(capMonthly * (state.months||0) + savingsCash);
-
-  const expensesNow = totalMonthly(state.expenses);
-  const efTarget = expensesNow * (state.efMonths||3);
-  $('efTarget').textContent = fmt(efTarget);
-  const efSurplus = savingsCash - efTarget;
-  const efEl = $('efSurplus');
-  efEl.textContent = fmt(efSurplus);
-  efEl.style.color = efSurplus >= 0 ? 'var(--green)' : 'var(--red)';
-  $('hrScore').textContent = houseReadinessScore();
-
-  const rows = state.scenarios.map(sc=>({ sc, r: calcScenario(sc) }));
-  rows.forEach(({sc,r})=>{
-    const badge = $('badge-'+sc.id);
-    badge.textContent = r.viable ? 'Viable' : 'No viable aún';
-    badge.className = 'badge ' + (r.viable ? 'viable' : 'no');
-    $('tp-'+sc.id).textContent = fmt(r.totalPrice);
-    $('tu-'+sc.id).textContent = fmt(r.totalUpfront);
-    $('rm-'+sc.id).textContent = fmt(r.reqMonthly);
-    $('rw-'+sc.id).textContent = fmt(r.reqWeekly);
-    $('cm-'+sc.id).textContent = fmt(r.totalRepayment);
-    $('cw-'+sc.id).textContent = fmt(r.repaymentWeekly);
-    const iaEl = $('ia-'+sc.id);
-    iaEl.textContent = fmt(r.incomeAfterRepayment);
-    iaEl.style.color = r.repaymentFits ? 'var(--green)' : 'var(--red)';
-    $('cs-'+sc.id).textContent = fmt(r.totalStressRepayment);
-    const lvrEl = $('lvr-'+sc.id);
-    lvrEl.textContent = Math.round(r.avgLVR) + '%';
-    lvrEl.style.color = r.avgLVR > 80 ? 'var(--red)' : 'var(--navy)';
-    $('lmi-'+sc.id).textContent = r.totalLMI > 0 ? fmt(r.totalLMI) : 'No aplica (pie ≥20%)';
-    $('sd-'+sc.id).textContent = r.totalStampDuty > 0 ? fmt(r.totalStampDuty) : '$0 (concesión aplicada)';
-    $('gf-'+sc.id).style.width = Math.min(100,r.pct)+'%';
-    $('gf-'+sc.id).style.background = r.viable ? 'var(--green)' : 'var(--red)';
-    $('gl-'+sc.id).textContent = `Requerido vs. capacidad mensual (${Math.round(r.pct)}%)`;
-    const bankEl = $('bank-'+sc.id);
-    bankEl.textContent = r.bankApproves ? 'Probable' : 'Ajustar cuota o pie';
-    bankEl.className = 'badge ' + (r.bankApproves ? 'viable' : 'no');
-    $('hgnote-'+sc.id).style.display = r.hgCount > 0 ? 'flex' : 'none';
-  });
-
-  const minReq = Math.min(...rows.map(x=>x.r.reqMonthly));
-  let html = `<tr><th>Escenario</th><th>Total upfront</th><th>Ahorro semanal req.</th><th>Cuota crédito mensual</th><th>Cuota banco (+3%)</th><th>Ingreso libre post-cuota</th><th>Estado</th><th>Banco</th></tr>`;
-  rows.forEach(({sc,r})=>{
-    const best = r.viable && r.reqMonthly === minReq;
-    html += `<tr class="${best?'best':''}">
-      <td>${sc.name}</td>
-      <td class="num">${fmt(r.totalUpfront)}</td>
-      <td class="num">${fmt(r.reqWeekly)}</td>
-      <td class="num">${fmt(r.totalRepayment)}</td>
-      <td class="num">${fmt(r.totalStressRepayment)}</td>
-      <td class="num">${fmt(r.incomeAfterRepayment)}</td>
-      <td>${r.viable ? '✔ Viable' : '✘ Ajustar'}</td>
-      <td>${r.bankApproves ? '✔ Probable' : '✘ Ajustar'}</td>
-    </tr>`;
-  });
-  $('compareTable').innerHTML = html;
-  if(typeof buildCashFlowTable === 'function' && $('cashFlowTable')) buildCashFlowTable();
-}
-
-// ---------- Cuentas (patrimonio) ----------
-function newAccount(){ return { id: crypto.randomUUID(), name:'Nueva cuenta', currency:'AUD', balance:0, fx:0 }; }
-function accountHTML(a){
-  return `
-    <div class="prop" data-row="${a.id}">
-      <div class="prop-head"><span class="tag">Cuenta</span><button class="rm" data-id="${a.id}" data-role="delAccount" title="Quitar">×</button></div>
-      <div class="grid6">
-        <div class="field"><label>Nombre / institución</label><input value="${a.name}" data-id="${a.id}" data-field="name"></div>
-        <div class="field"><label>Moneda</label><select data-id="${a.id}" data-field="currency"><option value="AUD" ${a.currency==='AUD'?'selected':''}>AUD</option><option value="COP" ${a.currency==='COP'?'selected':''}>COP</option></select></div>
-        <div class="field"><label>Saldo</label><input type="number" value="${a.balance}" data-id="${a.id}" data-field="balance"></div>
-        <div class="field"><label>FX (COP por AUD, solo si es COP)</label><input type="number" value="${a.fx||0}" data-id="${a.id}" data-field="fx"></div>
-      </div>
-    </div>`;
-}
-function buildAccounts(){ $('accountLines').innerHTML = state.accounts.map(accountHTML).join(''); }
-function setupAccountDelegation(){
-  const wrap = $('accountLines');
-  wrap.addEventListener('input', e=>{
-    const t = e.target; if(!t.dataset.field) return;
-    const a = state.accounts.find(x=>x.id===t.dataset.id);
-    a[t.dataset.field] = (t.dataset.field==='balance'||t.dataset.field==='fx') ? (parseFloat(t.value)||0) : t.value;
-    updateComputed(); save();
-  });
-  wrap.addEventListener('click', e=>{
-    if(e.target.dataset.role !== 'delAccount') return;
-    state.accounts = state.accounts.filter(x=>x.id!==e.target.dataset.id);
-    buildAccounts(); updateComputed(); save();
-  });
-}
-$('addAccount').addEventListener('click', ()=>{ state.accounts.push(newAccount()); buildAccounts(); updateComputed(); save(); });
-
-// ---------- Costos puntuales / flujo de caja ----------
-function newOneOff(){ return { id: crypto.randomUUID(), name:'Costo puntual', amount:0, month:1 }; }
-function oneOffHTML(o){
-  return `
-    <div class="prop" data-row="${o.id}">
-      <div class="prop-head"><span class="tag">Costo puntual</span><button class="rm" data-id="${o.id}" data-role="delOneOff" title="Quitar">×</button></div>
-      <div class="grid6">
-        <div class="field"><label>Concepto</label><input value="${o.name}" data-id="${o.id}" data-field="name"></div>
-        <div class="field"><label>Monto (AUD)</label><input type="number" value="${o.amount}" data-id="${o.id}" data-field="amount"></div>
-        <div class="field"><label>Mes (1-12 desde hoy)</label><input type="number" min="1" max="12" value="${o.month}" data-id="${o.id}" data-field="month"></div>
-      </div>
-    </div>`;
-}
-function buildOneOffs(){ $('oneOffLines').innerHTML = state.oneOffs.map(oneOffHTML).join(''); }
-function setupOneOffDelegation(){
-  const wrap = $('oneOffLines');
-  wrap.addEventListener('input', e=>{
-    const t = e.target; if(!t.dataset.field) return;
-    const o = state.oneOffs.find(x=>x.id===t.dataset.id);
-    o[t.dataset.field] = t.dataset.field==='name' ? t.value : (parseFloat(t.value)||0);
-    if(o.month) o.month = Math.min(12, Math.max(1, Math.round(o.month)));
-    updateComputed(); save();
-  });
-  wrap.addEventListener('click', e=>{
-    if(e.target.dataset.role !== 'delOneOff') return;
-    state.oneOffs = state.oneOffs.filter(x=>x.id!==e.target.dataset.id);
-    buildOneOffs(); updateComputed(); save();
-  });
-}
-$('addOneOff').addEventListener('click', ()=>{ state.oneOffs.push(newOneOff()); buildOneOffs(); updateComputed(); save(); });
-
-function buildCashFlowTable(){
-  const income = totalMonthly(state.incomes);
-  const expenses = totalMonthly(state.expenses);
-  let cash = totalSavingsCash();
-  let html = `<tr><th>Mes</th><th>Apertura</th><th>Ingreso</th><th>Gastos</th><th>Puntuales</th><th>Cierre</th></tr>`;
-  for(let m=1; m<=12; m++){
-    const oneOff = state.oneOffs.filter(o=>o.month===m).reduce((s,o)=>s+(o.amount||0),0);
-    const opening = cash;
-    const closing = opening + income - expenses - oneOff;
-    html += `<tr><td>Mes ${m}</td><td class="num">${fmt(opening)}</td><td class="num">${fmt(income)}</td><td class="num">${fmt(expenses)}</td><td class="num">${fmt(oneOff)}</td><td class="num">${fmt(closing)}</td></tr>`;
-    cash = closing;
-  }
-  $('cashFlowTable').innerHTML = html;
-}
-
-// ---------- Bitácora de decisiones ----------
-function newDecision(){ return { id: crypto.randomUUID(), date:'', decision:'', amount:0, notes:'' }; }
-function decisionHTML(d){
-  return `
-    <div class="prop" data-row="${d.id}">
-      <div class="prop-head"><span class="tag">Decisión</span><button class="rm" data-id="${d.id}" data-role="delDecision" title="Quitar">×</button></div>
-      <div class="grid6">
-        <div class="field"><label>Fecha</label><input type="date" value="${d.date}" data-id="${d.id}" data-field="date"></div>
-        <div class="field"><label>Decisión</label><input value="${d.decision}" data-id="${d.id}" data-field="decision"></div>
-        <div class="field"><label>Monto (AUD)</label><input type="number" value="${d.amount}" data-id="${d.id}" data-field="amount"></div>
-        <div class="field"><label>Notas</label><input value="${d.notes}" data-id="${d.id}" data-field="notes"></div>
-      </div>
-    </div>`;
-}
-function buildDecisions(){ $('decisionLines').innerHTML = state.decisions.map(decisionHTML).join(''); }
-function setupDecisionDelegation(){
-  const wrap = $('decisionLines');
-  wrap.addEventListener('input', e=>{
-    const t = e.target; if(!t.dataset.field) return;
-    const d = state.decisions.find(x=>x.id===t.dataset.id);
-    d[t.dataset.field] = t.dataset.field==='amount' ? (parseFloat(t.value)||0) : t.value;
-    save();
-  });
-  wrap.addEventListener('click', e=>{
-    if(e.target.dataset.role !== 'delDecision') return;
-    state.decisions = state.decisions.filter(x=>x.id!==e.target.dataset.id);
-    buildDecisions(); save();
-  });
-}
-$('addDecision').addEventListener('click', ()=>{ state.decisions.push(newDecision()); buildDecisions(); save(); });
-
-// ---------- Propiedades visitadas ----------
-function newVisit(){ return { id: crypto.randomUUID(), address:'', price:0, beds:0, baths:0, score:0, notes:'' }; }
-function visitHTML(v){
-  return `
-    <div class="prop" data-row="${v.id}">
-      <div class="prop-head"><span class="tag">Propiedad visitada</span><button class="rm" data-id="${v.id}" data-role="delVisit" title="Quitar">×</button></div>
-      <div class="grid6">
-        <div class="field"><label>Dirección / link</label><input value="${v.address}" data-id="${v.id}" data-field="address"></div>
-        <div class="field"><label>Precio</label><input type="number" value="${v.price}" data-id="${v.id}" data-field="price"></div>
-        <div class="field"><label>Habitaciones</label><input type="number" value="${v.beds}" data-id="${v.id}" data-field="beds"></div>
-        <div class="field"><label>Baños</label><input type="number" value="${v.baths}" data-id="${v.id}" data-field="baths"></div>
-        <div class="field"><label>Score (0-10)</label><input type="number" min="0" max="10" value="${v.score}" data-id="${v.id}" data-field="score"></div>
-        <div class="field"><label>Notas / pros y contras</label><input value="${v.notes}" data-id="${v.id}" data-field="notes"></div>
-      </div>
-    </div>`;
-}
-function buildVisits(){ $('propertyVisitLines').innerHTML = state.propertyVisits.map(visitHTML).join(''); }
-function setupVisitDelegation(){
-  const wrap = $('propertyVisitLines');
-  wrap.addEventListener('input', e=>{
-    const t = e.target; if(!t.dataset.field) return;
-    const v = state.propertyVisits.find(x=>x.id===t.dataset.id);
-    v[t.dataset.field] = ['address','notes'].includes(t.dataset.field) ? t.value : (parseFloat(t.value)||0);
-    save();
-  });
-  wrap.addEventListener('click', e=>{
-    if(e.target.dataset.role !== 'delVisit') return;
-    state.propertyVisits = state.propertyVisits.filter(x=>x.id!==e.target.dataset.id);
-    buildVisits(); save();
-  });
-}
-$('addVisit').addEventListener('click', ()=>{ state.propertyVisits.push(newVisit()); buildVisits(); save(); });
-
-// ---------- Exportar / importar ----------
-$('exportBtn').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'ruta-a-la-casa-backup.json';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-});
-$('importBtn').addEventListener('click', ()=> $('importFile').click());
-$('importFile').addEventListener('change', e=>{
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev=>{
-    try{
-      const parsed = JSON.parse(ev.target.result);
-      state = parsed;
-      load();
-    }catch(err){ alert('No se pudo leer el archivo. Verifica que sea un respaldo exportado desde esta misma app.'); }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-});
-
-function renderAll(){
-  buildLines('incomeLines', state.incomes, 'income');
-  buildLines('expenseLines', state.expenses, 'expense');
-  buildScenarios();
-  buildAccounts();
-  buildOneOffs();
-  buildDecisions();
-  buildVisits();
-  setupLineDelegation('incomeLines');
-  setupLineDelegation('expenseLines');
-  setupScenarioDelegation();
-  setupAccountDelegation();
-  setupOneOffDelegation();
-  setupDecisionDelegation();
-  setupVisitDelegation();
-  updateComputed();
-  buildCashFlowTable();
-}
-
-load();
-</script>
-</body>
-</html>
