@@ -232,6 +232,8 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       <div class="stat-row"><span class="lbl">Capacidad de ahorro mensual</span><span class="val" id="capMonth">$0</span></div>
       <div class="stat-row"><span class="lbl">Capacidad de ahorro semanal</span><span class="val" id="capWeek">$0</span></div>
       <div class="stat-row total"><span class="lbl">Ahorro proyectado en el horizonte</span><span class="val" id="capTotal">$0</span></div>
+      <div class="stat-row"><span class="lbl">Fondo de emergencia objetivo (3 meses de gastos)</span><span class="val" id="efTarget">$0</span></div>
+      <div class="stat-row"><span class="lbl">Ahorro disponible sobre el fondo de emergencia</span><span class="val" id="efSurplus">$0</span></div>
     </div>
   </div>
 
@@ -272,7 +274,7 @@ let state = {
 };
 
 function newProperty(){
-  return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30, financeLMI:true, homeGuarantee:false };
+  return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30, financeLMI:true, homeGuarantee:false, stampState:'NSW', firstHomeBuyer:false };
 }
 function newScenario(name){
   return { id: crypto.randomUUID(), name: name || 'Escenario', properties:[newProperty()], rentReplace:0 };
@@ -291,6 +293,28 @@ function estimateLMI(loanAmount, lvrPct){
   else if(lvrPct <= 95) rate = 0.028;
   else rate = 0.04;
   return loanAmount * rate;
+}
+// Stamp duty (conveyance duty) estimado por estado/territorio — tasa efectiva aproximada
+// sobre el precio para propiedad residencial establecida, comprador ocupante.
+// Son promedios de referencia, NO el cálculo exacto por tramos de cada revenue office.
+// Confirma la cifra real con la oficina de rentas de tu estado/territorio antes de decidir.
+const STAMP_DUTY_RATE = { NSW:0.045, VIC:0.055, QLD:0.038, WA:0.049, SA:0.043, TAS:0.040, NT:0.049, ACT:0.045 };
+function estimateStampDuty(price, stateCode, firstHomeBuyer){
+  let duty = price * (STAMP_DUTY_RATE[stateCode] || 0.045);
+  if(firstHomeBuyer){
+    if(stateCode === 'ACT'){
+      // Home Buyer Concession Scheme: exento desde 1 jul 2026, sin tope de ingreso ni de precio,
+      // para quienes no han tenido propiedad en los últimos 5 años. Confirma elegibilidad exacta.
+      duty = 0;
+    } else if(stateCode === 'NSW'){
+      // Exención total hasta $800k, concesión decreciente hasta $1M (aproximado).
+      if(price <= 800000) duty = 0;
+      else if(price <= 1000000) duty = duty * ((price - 800000) / 200000);
+    }
+    // Otros estados/territorios tienen sus propias concesiones de primer comprador
+    // que no están modeladas aquí — confirma con la oficina de rentas correspondiente.
+  }
+  return Math.max(0, duty);
 }
 
 const STORAGE_KEY = 'ruta-a-la-casa-state';
@@ -319,6 +343,8 @@ async function load(){
       (sc.properties||[]).forEach(p=>{
         if(p.financeLMI === undefined) p.financeLMI = true;
         if(p.homeGuarantee === undefined) p.homeGuarantee = false;
+        if(p.stampState === undefined) p.stampState = 'NSW';
+        if(p.firstHomeBuyer === undefined) p.firstHomeBuyer = false;
       });
     });
   }
@@ -410,13 +436,14 @@ function monthlyRepayment(loanAmount, annualRatePct, years){
 
 function calcScenario(sc){
   let totalPrice=0, totalDeposit=0, totalClosing=0, totalExtra=0, totalRepayment=0, totalStressRepayment=0;
-  let totalLoanForLVR=0, totalLMI=0, lmiUpfront=0, hgCount=0;
+  let totalLoanForLVR=0, totalLMI=0, lmiUpfront=0, hgCount=0, totalStampDuty=0;
   sc.properties.forEach(p=>{
     totalPrice += p.price;
     const depositAmt = p.price * (p.deposit/100);
     totalDeposit += depositAmt;
     totalClosing += p.price * (p.closing/100);
     totalExtra += p.extra;
+    totalStampDuty += estimateStampDuty(p.price, p.stampState, p.firstHomeBuyer);
     const loanAmount = p.price - depositAmt;
     const lvr = p.price > 0 ? (loanAmount / p.price) * 100 : 0;
     // El Home Guarantee Scheme reemplaza el LMI con una garantía del gobierno: no se paga LMI.
@@ -432,7 +459,7 @@ function calcScenario(sc){
     // El banco no te evalúa a la tasa real, sino a la tasa real + buffer de servicio (APRA).
     totalStressRepayment += monthlyRepayment(financedLoan, p.rate + SERVICEABILITY_BUFFER, p.years);
   });
-  const totalUpfront = totalDeposit + totalClosing + totalExtra + lmiUpfront;
+  const totalUpfront = totalDeposit + totalClosing + totalExtra + lmiUpfront + totalStampDuty;
   const avgLVR = totalPrice > 0 ? (totalLoanForLVR / totalPrice) * 100 : 0;
   const gap = Math.max(0, totalUpfront - state.savings);
   const monthsLeft = state.months || 1;
@@ -452,7 +479,7 @@ function calcScenario(sc){
   return { totalPrice, totalUpfront, gap, reqMonthly, reqWeekly, viable, pct, capMonthly,
     totalRepayment, repaymentWeekly, incomeAfterRepayment, repaymentFits,
     rentReplace, totalStressRepayment, stressRepaymentWeekly, stressIncomeAfterRepayment, bankApproves,
-    avgLVR, totalLMI, hgCount };
+    avgLVR, totalLMI, hgCount, totalStampDuty };
 }
 
 function propHTML(sc, p, idx){
@@ -471,6 +498,8 @@ function propHTML(sc, p, idx){
         <div class="field"><label>Plazo del crédito (años)</label><input type="number" value="${p.years}" data-sc="${sc.id}" data-idx="${idx}" data-field="years"></div>
         <div class="field"><label>Financiar LMI en el crédito (si pie &lt;20%)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="financeLMI"><option value="true" ${p.financeLMI?'selected':''}>Sí — capitalizarlo en la cuota</option><option value="false" ${!p.financeLMI?'selected':''}>No — pagarlo al contado</option></select></div>
         <div class="field"><label>Home Guarantee Scheme (5% pie, sin LMI)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="homeGuarantee"><option value="false" ${!p.homeGuarantee?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.homeGuarantee?'selected':''}>Sí — elegible confirmado</option></select></div>
+        <div class="field"><label>Estado / Territorio</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="stampState">${['NSW','VIC','QLD','WA','SA','TAS','NT','ACT'].map(s=>`<option value="${s}" ${p.stampState===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="field"><label>Primer comprador (concesión stamp duty)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="firstHomeBuyer"><option value="false" ${!p.firstHomeBuyer?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.firstHomeBuyer?'selected':''}>Sí — elegible confirmado</option></select></div>
       </div>
     </div>`;
 }
@@ -500,6 +529,7 @@ function scenarioHTML(sc){
         <div class="rbox"><div class="lbl">Cuota evaluación bancaria (+3%)</div><div class="val" id="cs-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">LVR promedio</div><div class="val" id="lvr-${sc.id}">0%</div></div>
         <div class="rbox"><div class="lbl">LMI estimado (aprox.)</div><div class="val" id="lmi-${sc.id}">$0</div></div>
+        <div class="rbox"><div class="lbl">Stamp duty estimado (aprox.)</div><div class="val" id="sd-${sc.id}">$0</div></div>
       </div>
       <div class="gauge-wrap">
         <div class="gauge-track"><div class="gauge-fill" id="gf-${sc.id}" style="width:0%;"></div></div>
@@ -538,8 +568,10 @@ function setupScenarioDelegation(){
     if(t.dataset.field && t.dataset.sc){
       const sc = state.scenarios.find(s=>s.id===t.dataset.sc);
       const idx = parseInt(t.dataset.idx);
-      if(t.dataset.field === 'financeLMI' || t.dataset.field === 'homeGuarantee'){
+      if(t.dataset.field === 'financeLMI' || t.dataset.field === 'homeGuarantee' || t.dataset.field === 'firstHomeBuyer'){
         sc.properties[idx][t.dataset.field] = (t.value === 'true');
+      } else if(t.dataset.field === 'stampState'){
+        sc.properties[idx].stampState = t.value;
       } else {
         sc.properties[idx][t.dataset.field] = parseFloat(t.value) || 0;
       }
@@ -581,6 +613,14 @@ function updateComputed(){
   $('capWeek').textContent = fmt(capMonthly/4.33);
   $('capTotal').textContent = fmt(capMonthly * (state.months||0) + (state.savings||0));
 
+  const expensesNow = totalMonthly(state.expenses);
+  const efTarget = expensesNow * 3;
+  $('efTarget').textContent = fmt(efTarget);
+  const efSurplus = (state.savings||0) - efTarget;
+  const efEl = $('efSurplus');
+  efEl.textContent = fmt(efSurplus);
+  efEl.style.color = efSurplus >= 0 ? 'var(--green)' : 'var(--red)';
+
   const rows = state.scenarios.map(sc=>({ sc, r: calcScenario(sc) }));
   rows.forEach(({sc,r})=>{
     const badge = $('badge-'+sc.id);
@@ -600,6 +640,7 @@ function updateComputed(){
     lvrEl.textContent = Math.round(r.avgLVR) + '%';
     lvrEl.style.color = r.avgLVR > 80 ? 'var(--red)' : 'var(--navy)';
     $('lmi-'+sc.id).textContent = r.totalLMI > 0 ? fmt(r.totalLMI) : 'No aplica (pie ≥20%)';
+    $('sd-'+sc.id).textContent = r.totalStampDuty > 0 ? fmt(r.totalStampDuty) : '$0 (concesión aplicada)';
     $('gf-'+sc.id).style.width = Math.min(100,r.pct)+'%';
     $('gf-'+sc.id).style.background = r.viable ? 'var(--green)' : 'var(--red)';
     $('gl-'+sc.id).textContent = `Requerido vs. capacidad mensual (${Math.round(r.pct)}%)`;
