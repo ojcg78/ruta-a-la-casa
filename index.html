@@ -275,8 +275,11 @@ function newProperty(){
   return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30 };
 }
 function newScenario(name){
-  return { id: crypto.randomUUID(), name: name || 'Escenario', properties:[newProperty()] };
+  return { id: crypto.randomUUID(), name: name || 'Escenario', properties:[newProperty()], rentReplace:0 };
 }
+// Buffer de servicio que APRA exige a los bancos: evalúan tu capacidad de pago
+// a la tasa real + este colchón, no a la tasa real. Vigente en 3 puntos porcentuales.
+const SERVICEABILITY_BUFFER = 3.0;
 
 const STORAGE_KEY = 'ruta-a-la-casa-state';
 
@@ -297,6 +300,9 @@ async function load(){
       { id: crypto.randomUUID(), name:'Supermercado', amount:0, freq:'semanal' },
       { id: crypto.randomUUID(), name:'Cuentas y servicios', amount:0, freq:'mensual' }
     ];
+  }
+  if(state.scenarios){
+    state.scenarios.forEach(sc=>{ if(sc.rentReplace === undefined) sc.rentReplace = 0; });
   }
   if(!state.scenarios || state.scenarios.length === 0){
     state.scenarios = [
@@ -385,7 +391,7 @@ function monthlyRepayment(loanAmount, annualRatePct, years){
 }
 
 function calcScenario(sc){
-  let totalPrice=0, totalDeposit=0, totalClosing=0, totalExtra=0, totalRepayment=0;
+  let totalPrice=0, totalDeposit=0, totalClosing=0, totalExtra=0, totalRepayment=0, totalStressRepayment=0;
   sc.properties.forEach(p=>{
     totalPrice += p.price;
     const depositAmt = p.price * (p.deposit/100);
@@ -394,6 +400,8 @@ function calcScenario(sc){
     totalExtra += p.extra;
     const loanAmount = p.price - depositAmt;
     totalRepayment += monthlyRepayment(loanAmount, p.rate, p.years);
+    // El banco no te evalúa a la tasa real, sino a la tasa real + buffer de servicio (APRA).
+    totalStressRepayment += monthlyRepayment(loanAmount, p.rate + SERVICEABILITY_BUFFER, p.years);
   });
   const totalUpfront = totalDeposit + totalClosing + totalExtra;
   const gap = Math.max(0, totalUpfront - state.savings);
@@ -404,9 +412,16 @@ function calcScenario(sc){
   const viable = reqMonthly <= capMonthly;
   const pct = capMonthly > 0 ? Math.min(150, (reqMonthly/capMonthly)*100) : (reqMonthly>0?150:0);
   const repaymentWeekly = totalRepayment / 4.33;
-  const incomeAfterRepayment = capMonthly - totalRepayment;
+  const rentReplace = sc.rentReplace || 0;
+  // Al comprar, el arriendo actual (si aplica) deja de pagarse: se suma de vuelta antes de restar la cuota nueva.
+  const incomeAfterRepayment = capMonthly + rentReplace - totalRepayment;
   const repaymentFits = incomeAfterRepayment >= 0;
-  return { totalPrice, totalUpfront, gap, reqMonthly, reqWeekly, viable, pct, capMonthly, totalRepayment, repaymentWeekly, incomeAfterRepayment, repaymentFits };
+  const stressIncomeAfterRepayment = capMonthly + rentReplace - totalStressRepayment;
+  const bankApproves = stressIncomeAfterRepayment >= 0;
+  const stressRepaymentWeekly = totalStressRepayment / 4.33;
+  return { totalPrice, totalUpfront, gap, reqMonthly, reqWeekly, viable, pct, capMonthly,
+    totalRepayment, repaymentWeekly, incomeAfterRepayment, repaymentFits,
+    rentReplace, totalStressRepayment, stressRepaymentWeekly, stressIncomeAfterRepayment, bankApproves };
 }
 
 function propHTML(sc, p, idx){
@@ -437,6 +452,10 @@ function scenarioHTML(sc){
       </div>
       <div class="props" id="props-${sc.id}">${sc.properties.map((p,idx)=>propHTML(sc,p,idx)).join('')}</div>
       <div class="addrow"><button class="btn ghost small" data-id="${sc.id}" data-role="addProp">+ Agregar propiedad</button></div>
+      <div class="field" style="margin-top:14px;">
+        <label>Arriendo mensual que dejarías de pagar al comprar (si aplica)</label>
+        <input type="number" value="${sc.rentReplace||0}" data-id="${sc.id}" data-role="rentReplace">
+      </div>
       <div class="results-grid">
         <div class="rbox"><div class="lbl">Total propiedades</div><div class="val" id="tp-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Necesario al contado</div><div class="val" id="tu-${sc.id}">$0</div></div>
@@ -445,10 +464,15 @@ function scenarioHTML(sc){
         <div class="rbox"><div class="lbl">Cuota crédito mensual</div><div class="val" id="cm-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Cuota crédito semanal</div><div class="val" id="cw-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Ingreso libre tras cuota</div><div class="val" id="ia-${sc.id}">$0</div></div>
+        <div class="rbox"><div class="lbl">Cuota evaluación bancaria (+3%)</div><div class="val" id="cs-${sc.id}">$0</div></div>
       </div>
       <div class="gauge-wrap">
         <div class="gauge-track"><div class="gauge-fill" id="gf-${sc.id}" style="width:0%;"></div></div>
         <div class="gauge-labels"><span>0</span><span id="gl-${sc.id}">Requerido vs. capacidad mensual</span><span>100%+</span></div>
+      </div>
+      <div class="stat-row" style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;">
+        <span class="lbl">Aprobación bancaria probable (buffer APRA +3%)</span>
+        <span class="badge" id="bank-${sc.id}">—</span>
       </div>
     </div>`;
 }
@@ -465,6 +489,12 @@ function setupScenarioDelegation(){
       const sc = state.scenarios.find(s=>s.id===t.dataset.id);
       sc.name = t.value;
       save();
+      return;
+    }
+    if(t.dataset.role === 'rentReplace'){
+      const sc = state.scenarios.find(s=>s.id===t.dataset.id);
+      sc.rentReplace = parseFloat(t.value) || 0;
+      updateComputed(); save();
       return;
     }
     if(t.dataset.field && t.dataset.sc){
@@ -523,13 +553,17 @@ function updateComputed(){
     const iaEl = $('ia-'+sc.id);
     iaEl.textContent = fmt(r.incomeAfterRepayment);
     iaEl.style.color = r.repaymentFits ? 'var(--green)' : 'var(--red)';
+    $('cs-'+sc.id).textContent = fmt(r.totalStressRepayment);
     $('gf-'+sc.id).style.width = Math.min(100,r.pct)+'%';
     $('gf-'+sc.id).style.background = r.viable ? 'var(--green)' : 'var(--red)';
     $('gl-'+sc.id).textContent = `Requerido vs. capacidad mensual (${Math.round(r.pct)}%)`;
+    const bankEl = $('bank-'+sc.id);
+    bankEl.textContent = r.bankApproves ? 'Probable' : 'Ajustar cuota o pie';
+    bankEl.className = 'badge ' + (r.bankApproves ? 'viable' : 'no');
   });
 
   const minReq = Math.min(...rows.map(x=>x.r.reqMonthly));
-  let html = `<tr><th>Escenario</th><th>Total upfront</th><th>Ahorro semanal req.</th><th>Cuota crédito mensual</th><th>Ingreso libre post-cuota</th><th>Estado</th></tr>`;
+  let html = `<tr><th>Escenario</th><th>Total upfront</th><th>Ahorro semanal req.</th><th>Cuota crédito mensual</th><th>Cuota banco (+3%)</th><th>Ingreso libre post-cuota</th><th>Estado</th><th>Banco</th></tr>`;
   rows.forEach(({sc,r})=>{
     const best = r.viable && r.reqMonthly === minReq;
     html += `<tr class="${best?'best':''}">
@@ -537,8 +571,10 @@ function updateComputed(){
       <td class="num">${fmt(r.totalUpfront)}</td>
       <td class="num">${fmt(r.reqWeekly)}</td>
       <td class="num">${fmt(r.totalRepayment)}</td>
+      <td class="num">${fmt(r.totalStressRepayment)}</td>
       <td class="num">${fmt(r.incomeAfterRepayment)}</td>
       <td>${r.viable ? '✔ Viable' : '✘ Ajustar'}</td>
+      <td>${r.bankApproves ? '✔ Probable' : '✘ Ajustar'}</td>
     </tr>`;
   });
   $('compareTable').innerHTML = html;
