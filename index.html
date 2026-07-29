@@ -386,7 +386,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
         <div class="guide-block">
           <div class="term-list">
             <div class="term"><div class="term-name">Resumen</div><div class="term-def">El panorama completo de un vistazo: la Ruta (los hitos reales hacia la compra), el patrimonio, la capacidad de ahorro y el mejor escenario del momento. Es de solo lectura — no se edita nada aquí.</div></div>
-            <div class="term"><div class="term-name">Ingresos y gastos</div><div class="term-def">El presupuesto familiar, línea por línea, cada una con su frecuencia real de pago (semanal, quincenal, mensual, anual). También viven aquí los dos parámetros generales: meses restantes hasta la meta y meses de fondo de emergencia objetivo.</div></div>
+            <div class="term"><div class="term-name">Ingresos y gastos</div><div class="term-def">El presupuesto familiar, línea por línea, cada una con su frecuencia real de pago (semanal, quincenal, mensual, anual). Se puede cargar todo de una vez desde un Excel en vez de escribir línea por línea — ver el detalle más abajo. También viven aquí los dos parámetros generales: meses restantes hasta la meta y meses de fondo de emergencia objetivo.</div></div>
             <div class="term"><div class="term-name">Patrimonio</div><div class="term-def">Todas las cuentas líquidas, en cualquier moneda. El total de esta página es el que alimenta directamente cuánto les alcanza para el pie — por eso deja fuera a propósito el super y los CDT a plazo fijo, que no son efectivo disponible hoy.</div></div>
             <div class="term"><div class="term-name">Escenarios</div><div class="term-def">El simulador de compra. Cada escenario puede tener una o varias propiedades, y calcula cuota real, cuota que exige el banco, LVR, LMI, stamp duty y si el Home Guarantee Scheme aplica.</div></div>
             <div class="term"><div class="term-name">Flujo de caja</div><div class="term-def">Una proyección mes a mes de los próximos 12 meses, para ver baches puntuales (una visa, un viaje, una reparación grande) antes de que ocurran.</div></div>
@@ -428,12 +428,40 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       </div>
 
       <div class="card">
+        <h2>Cargar ingresos y gastos desde Excel</h2>
+        <p>En la página "Ingresos y gastos" hay un botón para subir un archivo en vez de escribir cada línea a mano. Así se mantiene la app en minutos cada mes, actualizando el mismo Excel que ya usan.</p>
+        <div class="term-list">
+          <div class="term">
+            <div class="term-name">Formato que necesita el archivo</div>
+            <div class="term-def">4 columnas, en cualquier orden: <b>Tipo</b> (Ingreso o Gasto), <b>Concepto</b> (el nombre de la línea), <b>Monto</b> (el número) y <b>Frecuencia</b> (semanal, quincenal, mensual o anual). Usa el botón "Descargar plantilla" para tener un archivo de partida ya armado con el formato correcto.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Es flexible con los encabezados</div>
+            <div class="term-def">No importa si escriben "Tipo" en mayúsculas, con tilde, o incluso en inglés ("Type", "Amount", "Frequency") — la app los reconoce igual. Lo que sí tiene que estar sí o sí es una columna de Concepto y una de Monto; si falta alguna, no va a encontrar filas válidas.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Reemplaza, no suma</div>
+            <div class="term-def">Cargar un archivo <b>reemplaza por completo</b> los ingresos y gastos que ya tenían cargados en la app — no los combina. La app siempre pregunta antes de aplicar el cambio, mostrando cuántas filas encontró, para que puedan cancelar si algo no cuadra.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Necesita conexión a internet</div>
+            <div class="term-def">El lector de Excel se carga desde internet la primera vez que abren la app en cada sesión. Si no hay conexión en ese momento, la app avisa que no pudo cargar el lector — el resto de la herramienta funciona igual sin internet, solo esta función puntual lo necesita.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Acepta varias hojas</div>
+            <div class="term-def">Si el archivo tiene más de una hoja (por ejemplo, una para ingresos y otra para gastos), la app revisa todas — no hace falta que esté todo en una sola hoja.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>Cada cuánto actualizar</h2>
         <div class="routine-grid">
           <div class="routine-card">
             <div class="rc-freq">Cada mes</div>
             <ul>
               <li>Saldo de cada cuenta en Patrimonio, con el extracto real</li>
+              <li>Ingresos y gastos: si cambiaron, recarga el Excel actualizado</li>
               <li>Costos puntuales nuevos que hayan surgido</li>
               <li>Exportar un respaldo (.json)</li>
             </ul>
