@@ -247,7 +247,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
   </div>
 </div>
 
-<div class="footer-note">Los datos se guardan automáticamente en este dispositivo. Los % de pie y costos de cierre son aproximados — confirma cifras exactas con tu bróker hipotecario antes de decidir.</div>
+<div class="footer-note">Los datos se guardan automáticamente en este dispositivo. Los % de pie, costos de cierre y el LMI estimado son aproximados — confirma cifras exactas con tu bróker hipotecario antes de decidir.</div>
 
 <script>
 const fmt = n => '$' + (Math.round(n)).toLocaleString('en-AU');
@@ -272,7 +272,7 @@ let state = {
 };
 
 function newProperty(){
-  return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30 };
+  return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30, financeLMI:true };
 }
 function newScenario(name){
   return { id: crypto.randomUUID(), name: name || 'Escenario', properties:[newProperty()], rentReplace:0 };
@@ -280,6 +280,18 @@ function newScenario(name){
 // Buffer de servicio que APRA exige a los bancos: evalúan tu capacidad de pago
 // a la tasa real + este colchón, no a la tasa real. Vigente en 3 puntos porcentuales.
 const SERVICEABILITY_BUFFER = 3.0;
+// Estimación aproximada de LMI (Lenders Mortgage Insurance) por bandas de LVR.
+// Son tasas de referencia de mercado, no una cotización — el premio real depende
+// del asegurador, el prestamista y el tamaño exacto del préstamo. Confirma con tu bróker.
+function estimateLMI(loanAmount, lvrPct){
+  if(lvrPct <= 80) return 0;
+  let rate;
+  if(lvrPct <= 85) rate = 0.006;
+  else if(lvrPct <= 90) rate = 0.013;
+  else if(lvrPct <= 95) rate = 0.028;
+  else rate = 0.04;
+  return loanAmount * rate;
+}
 
 const STORAGE_KEY = 'ruta-a-la-casa-state';
 
@@ -302,7 +314,10 @@ async function load(){
     ];
   }
   if(state.scenarios){
-    state.scenarios.forEach(sc=>{ if(sc.rentReplace === undefined) sc.rentReplace = 0; });
+    state.scenarios.forEach(sc=>{
+      if(sc.rentReplace === undefined) sc.rentReplace = 0;
+      (sc.properties||[]).forEach(p=>{ if(p.financeLMI === undefined) p.financeLMI = true; });
+    });
   }
   if(!state.scenarios || state.scenarios.length === 0){
     state.scenarios = [
@@ -392,6 +407,7 @@ function monthlyRepayment(loanAmount, annualRatePct, years){
 
 function calcScenario(sc){
   let totalPrice=0, totalDeposit=0, totalClosing=0, totalExtra=0, totalRepayment=0, totalStressRepayment=0;
+  let totalLoanForLVR=0, totalLMI=0, lmiUpfront=0;
   sc.properties.forEach(p=>{
     totalPrice += p.price;
     const depositAmt = p.price * (p.deposit/100);
@@ -399,11 +415,20 @@ function calcScenario(sc){
     totalClosing += p.price * (p.closing/100);
     totalExtra += p.extra;
     const loanAmount = p.price - depositAmt;
-    totalRepayment += monthlyRepayment(loanAmount, p.rate, p.years);
+    const lvr = p.price > 0 ? (loanAmount / p.price) * 100 : 0;
+    const lmi = estimateLMI(loanAmount, lvr);
+    totalLoanForLVR += loanAmount;
+    totalLMI += lmi;
+    // Practica habitual: el LMI se capitaliza dentro del credito (sube la cuota un poco)
+    // en vez de pagarse al contado. Si el usuario prefiere pagarlo al contado, se suma al upfront.
+    const financedLoan = p.financeLMI ? loanAmount + lmi : loanAmount;
+    if(!p.financeLMI) lmiUpfront += lmi;
+    totalRepayment += monthlyRepayment(financedLoan, p.rate, p.years);
     // El banco no te evalúa a la tasa real, sino a la tasa real + buffer de servicio (APRA).
-    totalStressRepayment += monthlyRepayment(loanAmount, p.rate + SERVICEABILITY_BUFFER, p.years);
+    totalStressRepayment += monthlyRepayment(financedLoan, p.rate + SERVICEABILITY_BUFFER, p.years);
   });
-  const totalUpfront = totalDeposit + totalClosing + totalExtra;
+  const totalUpfront = totalDeposit + totalClosing + totalExtra + lmiUpfront;
+  const avgLVR = totalPrice > 0 ? (totalLoanForLVR / totalPrice) * 100 : 0;
   const gap = Math.max(0, totalUpfront - state.savings);
   const monthsLeft = state.months || 1;
   const reqMonthly = gap / monthsLeft;
@@ -421,7 +446,8 @@ function calcScenario(sc){
   const stressRepaymentWeekly = totalStressRepayment / 4.33;
   return { totalPrice, totalUpfront, gap, reqMonthly, reqWeekly, viable, pct, capMonthly,
     totalRepayment, repaymentWeekly, incomeAfterRepayment, repaymentFits,
-    rentReplace, totalStressRepayment, stressRepaymentWeekly, stressIncomeAfterRepayment, bankApproves };
+    rentReplace, totalStressRepayment, stressRepaymentWeekly, stressIncomeAfterRepayment, bankApproves,
+    avgLVR, totalLMI };
 }
 
 function propHTML(sc, p, idx){
@@ -438,6 +464,7 @@ function propHTML(sc, p, idx){
         <div class="field"><label>Otros costos fijos</label><input type="number" value="${p.extra}" data-sc="${sc.id}" data-idx="${idx}" data-field="extra"></div>
         <div class="field"><label>Tasa interés anual (%)</label><input type="number" step="0.1" value="${p.rate}" data-sc="${sc.id}" data-idx="${idx}" data-field="rate"></div>
         <div class="field"><label>Plazo del crédito (años)</label><input type="number" value="${p.years}" data-sc="${sc.id}" data-idx="${idx}" data-field="years"></div>
+        <div class="field"><label>Financiar LMI en el crédito (si pie &lt;20%)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="financeLMI"><option value="true" ${p.financeLMI?'selected':''}>Sí — capitalizarlo en la cuota</option><option value="false" ${!p.financeLMI?'selected':''}>No — pagarlo al contado</option></select></div>
       </div>
     </div>`;
 }
@@ -465,6 +492,8 @@ function scenarioHTML(sc){
         <div class="rbox"><div class="lbl">Cuota crédito semanal</div><div class="val" id="cw-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Ingreso libre tras cuota</div><div class="val" id="ia-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Cuota evaluación bancaria (+3%)</div><div class="val" id="cs-${sc.id}">$0</div></div>
+        <div class="rbox"><div class="lbl">LVR promedio</div><div class="val" id="lvr-${sc.id}">0%</div></div>
+        <div class="rbox"><div class="lbl">LMI estimado (aprox.)</div><div class="val" id="lmi-${sc.id}">$0</div></div>
       </div>
       <div class="gauge-wrap">
         <div class="gauge-track"><div class="gauge-fill" id="gf-${sc.id}" style="width:0%;"></div></div>
@@ -500,7 +529,11 @@ function setupScenarioDelegation(){
     if(t.dataset.field && t.dataset.sc){
       const sc = state.scenarios.find(s=>s.id===t.dataset.sc);
       const idx = parseInt(t.dataset.idx);
-      sc.properties[idx][t.dataset.field] = parseFloat(t.value) || 0;
+      if(t.dataset.field === 'financeLMI'){
+        sc.properties[idx].financeLMI = (t.value === 'true');
+      } else {
+        sc.properties[idx][t.dataset.field] = parseFloat(t.value) || 0;
+      }
       updateComputed(); save();
     }
   });
@@ -554,6 +587,10 @@ function updateComputed(){
     iaEl.textContent = fmt(r.incomeAfterRepayment);
     iaEl.style.color = r.repaymentFits ? 'var(--green)' : 'var(--red)';
     $('cs-'+sc.id).textContent = fmt(r.totalStressRepayment);
+    const lvrEl = $('lvr-'+sc.id);
+    lvrEl.textContent = Math.round(r.avgLVR) + '%';
+    lvrEl.style.color = r.avgLVR > 80 ? 'var(--red)' : 'var(--navy)';
+    $('lmi-'+sc.id).textContent = r.totalLMI > 0 ? fmt(r.totalLMI) : 'No aplica (pie ≥20%)';
     $('gf-'+sc.id).style.width = Math.min(100,r.pct)+'%';
     $('gf-'+sc.id).style.background = r.viable ? 'var(--green)' : 'var(--red)';
     $('gl-'+sc.id).textContent = `Requerido vs. capacidad mensual (${Math.round(r.pct)}%)`;
