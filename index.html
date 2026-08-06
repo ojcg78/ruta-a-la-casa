@@ -340,6 +340,10 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       <svg viewBox="0 0 24 24"><path d="M3 15c2-4 4 4 6 0s4-8 6-4 4 4 6 0"/></svg>
       Flujo de caja
     </button>
+    <button class="navbtn" data-page="optimizacion">
+      <svg viewBox="0 0 24 24"><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/><circle cx="12" cy="12" r="3"/></svg>
+      Optimización
+    </button>
     <div class="rail-divider"></div>
     <button class="navbtn" data-page="bitacora">
       <svg viewBox="0 0 24 24"><path d="M4 5c3-1.5 6-1.5 8 0v14c-2-1.5-5-1.5-8 0z"/><path d="M20 5c-3-1.5-6-1.5-8 0v14c2-1.5 5-1.5 8 0z"/></svg>
@@ -642,6 +646,69 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       <div class="card">
         <h2>Proyección mes a mes</h2>
         <div class="table-scroll"><table class="compare" id="cashFlowTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ===================== OPTIMIZACION ===================== -->
+    <section class="page" data-page="optimizacion">
+      <div class="page-head">
+        <div class="eyebrow">Fase 2 — después de comprar</div>
+        <h2>Optimización</h2>
+        <p>Una vez definido qué comprar, estas herramientas ayudan a decidir cómo pagar el crédito de forma más eficiente y a validar si comprar sigue siendo mejor que arrendar en tu horizonte.</p>
+      </div>
+
+      <div class="card">
+        <h2>Pagos extra al crédito<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Simula cuánto tiempo e interés te ahorras si pagas un extra fijo cada mes, por encima de la cuota normal.</span></span></h2>
+        <div class="grid6">
+          <div class="field"><label>Saldo del crédito</label><input type="number" min="0" id="erLoan" value="480000"></div>
+          <div class="field"><label>Tasa anual (%)</label><input type="number" min="0" step="0.1" id="erRate" value="6.0"></div>
+          <div class="field"><label>Plazo restante (años)</label><input type="number" min="1" id="erYears" value="30"></div>
+          <div class="field"><label>Pago extra mensual</label><input type="number" min="0" id="erExtra" value="500"></div>
+        </div>
+        <div class="results-grid" style="margin-top:14px;">
+          <div class="rbox"><div class="lbl">Cuota normal</div><div class="val" id="erNormalPay">$0</div></div>
+          <div class="rbox"><div class="lbl">Plazo original</div><div class="val" id="erNormalYears">0 años</div></div>
+          <div class="rbox"><div class="lbl">Interés total original</div><div class="val" id="erNormalInterest">$0</div></div>
+          <div class="rbox"><div class="lbl">Nuevo plazo con extra</div><div class="val" id="erNewYears">0 años</div></div>
+          <div class="rbox"><div class="lbl">Interés total con extra</div><div class="val" id="erNewInterest">$0</div></div>
+          <div class="rbox"><div class="lbl">Interés ahorrado</div><div class="val" id="erSaved">$0</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Split loan (fijo + variable)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Compara la cuota combinada de dividir el crédito entre una porción a tasa fija y otra variable, contra tenerlo 100% en una sola tasa.</span></span></h2>
+        <div class="grid6">
+          <div class="field"><label>Saldo del crédito</label><input type="number" min="0" id="slLoan" value="480000"></div>
+          <div class="field"><label>% a tasa fija</label><input type="number" min="0" max="100" id="slPctFixed" value="50"></div>
+          <div class="field"><label>Tasa fija (%)</label><input type="number" min="0" step="0.1" id="slRateFixed" value="5.8"></div>
+          <div class="field"><label>Tasa variable (%)</label><input type="number" min="0" step="0.1" id="slRateVar" value="6.2"></div>
+          <div class="field"><label>Plazo (años)</label><input type="number" min="1" id="slYears" value="30"></div>
+        </div>
+        <div class="results-grid" style="margin-top:14px;">
+          <div class="rbox"><div class="lbl">Cuota tramo fijo</div><div class="val" id="slPayFixed">$0</div></div>
+          <div class="rbox"><div class="lbl">Cuota tramo variable</div><div class="val" id="slPayVar">$0</div></div>
+          <div class="rbox"><div class="lbl">Cuota combinada (split)</div><div class="val" id="slPayTotal">$0</div></div>
+          <div class="rbox"><div class="lbl">Cuota si fuera 100% variable</div><div class="val" id="slPay100Var">$0</div></div>
+          <div class="rbox"><div class="lbl">Diferencia vs. 100% variable</div><div class="val" id="slDiff">$0</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Rent vs Buy<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Compara el costo de arrendar vs. comprar en tu horizonte de proyección, incluyendo lo que rendiría el pie si en vez de comprar lo invirtieras. Aproximado — no incluye todos los costos de mantención.</span></span></h2>
+        <div class="grid6">
+          <div class="field"><label>Arriendo semanal actual/equivalente</label><input type="number" min="0" id="rvbRent" value="650"></div>
+          <div class="field"><label>Crecimiento anual del arriendo (%)</label><input type="number" min="0" step="0.1" id="rvbRentGrowth" value="3"></div>
+          <div class="field"><label>Pie + costos de cierre (si compra)</label><input type="number" min="0" id="rvbDeposit" value="150000"></div>
+          <div class="field"><label>Retorno anual si invirtieras el pie (%)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Costo de oportunidad: qué rendiría ese capital en otro vehículo (ETF, super) si no lo usas como pie.</span></span></label><input type="number" min="0" step="0.1" id="rvbInvestReturn" value="7"></div>
+          <div class="field"><label>Cuota mensual del crédito (si compra)</label><input type="number" min="0" id="rvbRepayment" value="2878"></div>
+          <div class="field"><label>Costos de mantención/rates mensuales (si compra)</label><input type="number" min="0" id="rvbMaintenance" value="400"></div>
+        </div>
+        <div class="results-grid" style="margin-top:14px;">
+          <div class="rbox"><div class="lbl">Costo total arrendar (horizonte)</div><div class="val" id="rvbRentTotal">$0</div></div>
+          <div class="rbox"><div class="lbl">Costo total comprar (cuota+mantención, horizonte)</div><div class="val" id="rvbBuyTotal">$0</div></div>
+          <div class="rbox"><div class="lbl">Costo de oportunidad del pie invertido</div><div class="val" id="rvbOpportunity">$0</div></div>
+          <div class="rbox"><div class="lbl">Diferencia neta (positivo = comprar sale mejor)</div><div class="val" id="rvbNet">$0</div></div>
+        </div>
       </div>
     </section>
 
@@ -1440,6 +1507,105 @@ function buildCashFlowTable(){
   }
   $('cashFlowTable').innerHTML = html;
 }
+
+// ---------- Optimización (Fase 2) ----------
+const OPT_KEY = 'ruta-a-la-casa-optimizer';
+const OPT_IDS = ['erLoan','erRate','erYears','erExtra','slLoan','slPctFixed','slRateFixed','slRateVar','slYears',
+  'rvbRent','rvbRentGrowth','rvbDeposit','rvbInvestReturn','rvbRepayment','rvbMaintenance'];
+
+function payoffMonths(loanAmount, annualRatePct, monthlyPayment){
+  const r = (annualRatePct/100)/12;
+  if(loanAmount <= 0) return 0;
+  if(r === 0) return monthlyPayment>0 ? loanAmount/monthlyPayment : Infinity;
+  if(monthlyPayment <= loanAmount*r) return Infinity;
+  return Math.log(monthlyPayment/(monthlyPayment - loanAmount*r)) / Math.log(1+r);
+}
+
+function updateOptimizer(){
+  // Pagos extra
+  const loan = parseFloat($('erLoan').value)||0;
+  const rate = parseFloat($('erRate').value)||0;
+  const years = parseFloat($('erYears').value)||1;
+  const extra = parseFloat($('erExtra').value)||0;
+  const normalPay = monthlyRepayment(loan, rate, years);
+  const normalMonths = years*12;
+  const normalInterest = normalPay*normalMonths - loan;
+  const newPay = normalPay + extra;
+  const newMonths = payoffMonths(loan, rate, newPay);
+  const newInterest = isFinite(newMonths) ? (newPay*newMonths - loan) : normalInterest;
+  const saved = normalInterest - newInterest;
+  $('erNormalPay').textContent = fmt(normalPay);
+  $('erNormalYears').textContent = years + ' años';
+  $('erNormalInterest').textContent = fmt(normalInterest);
+  $('erNewYears').textContent = isFinite(newMonths) ? (newMonths/12).toFixed(1) + ' años' : 'no se paga';
+  $('erNewInterest').textContent = isFinite(newMonths) ? fmt(newInterest) : '—';
+  const savedEl = $('erSaved');
+  savedEl.textContent = isFinite(newMonths) ? fmt(saved) : '—';
+  savedEl.style.color = saved >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Split loan
+  const slLoan = parseFloat($('slLoan').value)||0;
+  const pctFixed = Math.min(100, Math.max(0, parseFloat($('slPctFixed').value)||0));
+  const rateFixed = parseFloat($('slRateFixed').value)||0;
+  const rateVar = parseFloat($('slRateVar').value)||0;
+  const slYears = parseFloat($('slYears').value)||1;
+  const fixedAmt = slLoan*(pctFixed/100);
+  const varAmt = slLoan*(1-pctFixed/100);
+  const payFixed = monthlyRepayment(fixedAmt, rateFixed, slYears);
+  const payVar = monthlyRepayment(varAmt, rateVar, slYears);
+  const payTotal = payFixed + payVar;
+  const pay100Var = monthlyRepayment(slLoan, rateVar, slYears);
+  $('slPayFixed').textContent = fmt(payFixed);
+  $('slPayVar').textContent = fmt(payVar);
+  $('slPayTotal').textContent = fmt(payTotal);
+  $('slPay100Var').textContent = fmt(pay100Var);
+  const slDiffEl = $('slDiff');
+  const slDiff = payTotal - pay100Var;
+  slDiffEl.textContent = (slDiff>=0?'+':'') + fmt(slDiff) + '/mes';
+  slDiffEl.style.color = slDiff <= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Rent vs Buy
+  const horizon = state.horizonYears || 10;
+  const rent0 = parseFloat($('rvbRent').value)||0;
+  const rentGrowth = (parseFloat($('rvbRentGrowth').value)||0)/100;
+  const deposit = parseFloat($('rvbDeposit').value)||0;
+  const investReturn = (parseFloat($('rvbInvestReturn').value)||0)/100;
+  const repayment = parseFloat($('rvbRepayment').value)||0;
+  const maintenance = parseFloat($('rvbMaintenance').value)||0;
+  let rentTotal = 0;
+  for(let y=0; y<horizon; y++){
+    rentTotal += (rent0*52/12) * Math.pow(1+rentGrowth, y) * 12;
+  }
+  const buyTotal = (repayment+maintenance)*12*horizon;
+  const opportunity = deposit * (Math.pow(1+investReturn, horizon) - 1);
+  const net = rentTotal - buyTotal - opportunity;
+  $('rvbRentTotal').textContent = fmt(rentTotal);
+  $('rvbBuyTotal').textContent = fmt(buyTotal);
+  $('rvbOpportunity').textContent = fmt(opportunity);
+  const netEl = $('rvbNet');
+  netEl.textContent = fmt(net);
+  netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+}
+
+function loadOptimizer(){
+  try{
+    const raw = localStorage.getItem(OPT_KEY);
+    if(raw){
+      const saved = JSON.parse(raw);
+      OPT_IDS.forEach(id=>{ if(saved[id]!==undefined && $(id)) $(id).value = saved[id]; });
+    }
+  }catch(e){ /* sin datos guardados aún */ }
+  OPT_IDS.forEach(id=>{
+    $(id).addEventListener('input', ()=>{
+      const data = {};
+      OPT_IDS.forEach(k=> data[k] = $(k).value);
+      localStorage.setItem(OPT_KEY, JSON.stringify(data));
+      updateOptimizer();
+    });
+  });
+  updateOptimizer();
+}
+loadOptimizer();
 
 // ---------- Bitácora de decisiones ----------
 function newDecision(){ return { id: crypto.randomUUID(), date:'', decision:'', amount:0, notes:'' }; }
