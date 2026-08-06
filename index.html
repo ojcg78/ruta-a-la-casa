@@ -416,9 +416,10 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
           <div class="term-list">
             <div class="term"><div class="term-name">Resumen</div><div class="term-def">El panorama completo de un vistazo: la Ruta (los hitos reales hacia la compra), el patrimonio, la capacidad de ahorro y el mejor escenario del momento. Es de solo lectura — no se edita nada aquí.</div></div>
             <div class="term"><div class="term-name">Ingresos y gastos</div><div class="term-def">El presupuesto familiar, línea por línea, cada una con su frecuencia real de pago (semanal, quincenal, mensual, anual). Se puede cargar todo de una vez desde un Excel en vez de escribir línea por línea — ver el detalle más abajo. También viven aquí los dos parámetros generales: meses restantes hasta la meta y meses de fondo de emergencia objetivo.</div></div>
-            <div class="term"><div class="term-name">Patrimonio</div><div class="term-def">Todas las cuentas líquidas, en cualquier moneda. El total de esta página es el que alimenta directamente cuánto les alcanza para el pie — por eso deja fuera a propósito el super y los CDT a plazo fijo, que no son efectivo disponible hoy.</div></div>
-            <div class="term"><div class="term-name">Escenarios</div><div class="term-def">El simulador de compra. Cada escenario puede tener una o varias propiedades, y calcula cuota real, cuota que exige el banco, LVR, LMI, stamp duty y si el Home Guarantee Scheme aplica.</div></div>
+            <div class="term"><div class="term-name">Patrimonio</div><div class="term-def">Todas las cuentas líquidas, en cualquier moneda. Cada cuenta se marca con un propósito: "Ahorro para el pie" (cuenta como disponible para comprar) o "Fondo de emergencia" (queda aparte — no se usa para el pie, y es la única que cuenta para el colchón de 3 meses). Deja fuera a propósito el super y los CDT a plazo fijo, que no son efectivo disponible hoy.</div></div>
+            <div class="term"><div class="term-name">Escenarios</div><div class="term-def">El simulador de compra y rentabilidad. Cada escenario puede tener una o varias propiedades, con su estrategia (usada, nueva, house & land package, remodelar), y calcula cuota real, cuota que exige el banco, LVR, LMI, stamp duty (con concesiones por estado y estrategia), valor y equity proyectados, y retorno anualizado sobre el capital invertido.</div></div>
             <div class="term"><div class="term-name">Flujo de caja</div><div class="term-def">Una proyección mes a mes de los próximos 12 meses, para ver baches puntuales (una visa, un viaje, una reparación grande) antes de que ocurran.</div></div>
+            <div class="term"><div class="term-name">Optimización</div><div class="term-def">Fase 2 — para después de comprar. Tres calculadoras: cuánto ahorran en intereses con pagos extra al crédito, cómo comparan un split loan (fijo+variable) contra 100% variable, y si comprar sigue siendo mejor que arrendar en su horizonte. El botón "Importar desde un escenario" copia el crédito y cuota de un escenario ya definido, sin escribirlo de nuevo.</div></div>
             <div class="term"><div class="term-name">Bitácora</div><div class="term-def">Registro de decisiones financieras grandes (&gt;$1,000): qué decidieron, cuánto, y por qué — para no olvidar el razonamiento con el tiempo.</div></div>
             <div class="term"><div class="term-name">Propiedades</div><div class="term-def">Las propiedades que ya visitaron, con su propio puntaje y notas, para comparar con cabeza fría.</div></div>
             <div class="term"><div class="term-name">Respaldo</div><div class="term-def">Exportar o importar todos los datos como un archivo .json. Todo vive solo en este navegador — sin respaldo, un caché borrado se lleva todo.</div></div>
@@ -447,11 +448,27 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
           </div>
           <div class="term">
             <div class="term-name">Stamp duty (conveyance duty)</div>
-            <div class="term-def">El impuesto de transferencia de propiedad, que varía por estado/territorio. La app usa tasas efectivas aproximadas, con casos especiales ya modelados para ACT y NSW con concesión de primer comprador — los demás estados muestran la tasa estándar.</div>
+            <div class="term-def">El impuesto de transferencia de propiedad, que varía por estado/territorio. La app modela concesión de primer comprador en ACT, NSW, VIC, WA, TAS y QLD, y concesiones específicas para vivienda nueva/house & land en VIC (duty solo sobre el terreno), WA (50% de descuento, tope $50k), NT (exención total en house & land) y SA (primer comprador de vivienda nueva, $0 sin tope). Son estimaciones de referencia — confirma la vigencia real con la oficina de rentas antes de decidir, varias concesiones tienen fecha de vencimiento.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Retorno anualizado sobre capital</div>
+            <div class="term-def">En cada escenario: cuánto crece el equity proyectado (valor futuro menos saldo del crédito) frente al capital que pusieron al comprar (upfront), expresado como tasa anual compuesta al horizonte que elijan en Escenarios. Es una métrica para <i>comparar entre escenarios</i>, no un retorno neto real — no descuenta intereses pagados ni costos de tenencia.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Interest Only (crédito solo-interés)</div>
+            <div class="term-def">Durante los primeros años (configurables), la cuota solo paga interés — el capital no baja. Común en propiedades de inversión. La app lo refleja tanto en la cuota actual como en el saldo proyectado del crédito.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Borrowing power (Resumen)</div>
+            <div class="term-def">Una estimación de cuánto les prestaría un banco hoy, usando el 90% de su capacidad de ahorro mensual como cuota máxima, a una tasa de referencia de 6% + el buffer APRA, a 30 años. Referencial — cada banco calcula distinto.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Split loan / Rent vs Buy (Optimización)</div>
+            <div class="term-def">Split loan compara la cuota de dividir el crédito en tramo fijo + variable contra tenerlo 100% variable. Rent vs Buy compara el costo total de arrendar contra comprar en el horizonte elegido, incluyendo el costo de oportunidad de invertir el pie en vez de usarlo como entrada.</div>
           </div>
           <div class="term">
             <div class="term-name">House Readiness Score (0-100)</div>
-            <div class="term-def">Un número único que resume tres cosas: 35% qué tan lleno está el fondo de emergencia, 30% la tasa de ahorro sobre el ingreso (tope en 30%), y 35% si algún escenario es viable y si el banco probablemente aprobaría el préstamo. No es una fórmula oficial de ningún banco — es solo una brújula interna para no tener que leer ocho números cada vez.</div>
+            <div class="term-def">Un número único que resume tres cosas: 35% qué tan lleno está el fondo de emergencia (solo cuentas marcadas como tal en Patrimonio), 30% la tasa de ahorro sobre el ingreso (tope en 30%), y 35% si algún escenario es viable y si el banco probablemente aprobaría el préstamo. No es una fórmula oficial de ningún banco — es solo una brújula interna para no tener que leer ocho números cada vez.</div>
           </div>
         </div>
       </div>
@@ -495,6 +512,18 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
             <div class="term-def">El botón "Registrar patrimonio de este mes" (en Patrimonio) guarda una foto del total líquido de ese momento. Si lo tocan varias veces en el mismo mes, actualiza el registro de ese mes en vez de duplicarlo — así solo queda un punto por mes en el gráfico.</div>
           </div>
           <div class="term">
+            <div class="term-name">Cargar cuentas desde Excel (Patrimonio)</div>
+            <div class="term-def">Igual que con ingresos y gastos, pero con columnas Nombre, Moneda, Saldo, FX y Propósito (opcional — "emergencia" o vacío/cualquier otra cosa para "ahorro para el pie"). También reemplaza las cuentas actuales, y también pide confirmación antes de aplicar.</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Propósito de cada cuenta (Patrimonio)</div>
+            <div class="term-def">Marca cada cuenta como "Ahorro para el pie" o "Fondo de emergencia". Solo el dinero marcado como emergencia cuenta para el colchón — el resto se trata como disponible para comprar. Por defecto todas las cuentas nuevas quedan como "Ahorro para el pie".</div>
+          </div>
+          <div class="term">
+            <div class="term-name">Importar desde un escenario (Optimización)</div>
+            <div class="term-def">Copia el crédito, tasa promedio, plazo, cuota actual y capital de un escenario ya definido en Escenarios directamente a las tres calculadoras de Optimización, sin tener que volver a escribir los números a mano.</div>
+          </div>
+          <div class="term">
             <div class="term-name">Duplicar escenario</div>
             <div class="term-def">El botón "Duplicar" junto a "Eliminar" en cada escenario crea una copia completa con todas sus propiedades — útil para comparar variantes del mismo escenario (ej. mismo departamento con 10% vs 15% de pie) sin reconstruirlo desde cero.</div>
           </div>
@@ -524,6 +553,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
               <li>Super y CDT, si los llevan como referencia aparte</li>
               <li>Tipo de cambio COP/AUD si tienen cuentas en COP</li>
               <li>Precio y tasa de interés de cada escenario, contra el mercado actual</li>
+              <li>Crecimiento anual estimado (capGrowth) de cada propiedad, contra la plusvalía real del suburbio</li>
             </ul>
           </div>
           <div class="routine-card">
