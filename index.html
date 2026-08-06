@@ -387,6 +387,15 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
           <div class="bc-item"><div class="lbl">Cuota banco (+3%)</div><div class="val" id="bestBank">$0</div></div>
         </div>
       </div>
+
+      <div class="best-card">
+        <div class="bc-head"><h3>Borrowing power estimado<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Cuánto podría prestarte un banco hoy, según tu capacidad de ahorro actual (con 10% de margen de seguridad), a una tasa de referencia de 6% + el buffer de servicio de APRA (+3%), a 30 años. Es una estimación de referencia, no una pre-aprobación — cada banco calcula distinto.</span></span></div></div>
+        <div class="bc-grid">
+          <div class="bc-item"><div class="lbl">Préstamo máximo estimado</div><div class="val" id="bpLoan">$0</div></div>
+          <div class="bc-item"><div class="lbl">Cuota mensual usada (90% de tu capacidad)</div><div class="val" id="bpBudget">$0</div></div>
+          <div class="bc-item"><div class="lbl">Tasa de referencia usada</div><div class="val" id="bpRate">0%</div></div>
+        </div>
+      </div>
     </section>
 
     <!-- ===================== GUÍA ===================== -->
@@ -602,7 +611,11 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       <div class="page-head">
         <div class="eyebrow">Simulador de compra</div>
         <h2>Escenarios</h2>
-        <p>Cada escenario puede tener varias propiedades. Incluye el buffer de servicio del banco (+3%), LVR, LMI, Home Guarantee Scheme y stamp duty por estado.</p>
+        <p>Cada escenario puede tener varias propiedades. Incluye el buffer de servicio del banco (+3%), LVR, LMI, Home Guarantee Scheme, stamp duty por estado, y rentabilidad proyectada (equity y retorno anualizado) para comparar qué estrategia construye más patrimonio.</p>
+      </div>
+      <div class="field" style="max-width:260px; margin-bottom:16px;">
+        <label>Horizonte de proyección (años)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">A cuántos años proyectar el valor y equity de cada propiedad, para comparar rentabilidad entre escenarios.</span></span></label>
+        <input type="number" min="1" max="40" id="horizonYears" value="10">
       </div>
       <div id="scenarios"></div>
       <div class="addrow"><button class="btn ghost" id="addScenario">+ Agregar escenario</button></div>
@@ -724,7 +737,7 @@ function freqOptions(selected){
 function toMonthly(amount, freq){ return (FREQ[freq]||FREQ.mensual).toMonthly(amount||0); }
 
 let state = {
-  savings:0, months:12, efMonths:3,
+  savings:0, months:12, efMonths:3, horizonYears:10,
   incomes: [],
   expenses: [],
   scenarios: [],
@@ -736,7 +749,8 @@ let state = {
 };
 
 function newProperty(){
-  return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30, financeLMI:true, homeGuarantee:false, stampState:'NSW', firstHomeBuyer:false };
+  return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30, financeLMI:true, homeGuarantee:false, stampState:'NSW', firstHomeBuyer:false,
+    strategy:'usada', capGrowth:5, isInvestment:false, weeklyRent:0, interestOnly:false, ioYears:0, renoBudget:0, renoValueAdd:0 };
 }
 function newScenario(name){
   return { id: crypto.randomUUID(), name: name || 'Escenario', properties:[newProperty()], rentReplace:0 };
@@ -787,6 +801,7 @@ async function load(){
     if(raw){ state = JSON.parse(raw); }
   }catch(e){ /* sin datos guardados aún */ }
   if(state.efMonths === undefined) state.efMonths = 3;
+  if(state.horizonYears === undefined) state.horizonYears = 10;
   if(!state.accounts || state.accounts.length === 0){
     // Migración: si existía el campo antiguo de "ahorros" en una sola cifra, se convierte en una cuenta.
     state.accounts = [
@@ -818,6 +833,14 @@ async function load(){
         if(p.homeGuarantee === undefined) p.homeGuarantee = false;
         if(p.stampState === undefined) p.stampState = 'NSW';
         if(p.firstHomeBuyer === undefined) p.firstHomeBuyer = false;
+        if(p.strategy === undefined) p.strategy = 'usada';
+        if(p.capGrowth === undefined) p.capGrowth = 5;
+        if(p.isInvestment === undefined) p.isInvestment = false;
+        if(p.weeklyRent === undefined) p.weeklyRent = 0;
+        if(p.interestOnly === undefined) p.interestOnly = false;
+        if(p.ioYears === undefined) p.ioYears = 0;
+        if(p.renoBudget === undefined) p.renoBudget = 0;
+        if(p.renoValueAdd === undefined) p.renoValueAdd = 0;
       });
     });
   }
@@ -838,13 +861,16 @@ async function save(){
 function hydrateInputs(){
   $('months').value = state.months;
   $('efMonths').value = state.efMonths;
+  $('horizonYears').value = state.horizonYears||10;
 }
 
-['months','efMonths'].forEach(id=>{
+['months','efMonths','horizonYears'].forEach(id=>{
   $(id).addEventListener('input', e=>{
     state[id] = parseFloat(e.target.value) || 0;
     if(id==='months') state.months = Math.min(12, Math.max(1, Math.round(state.months)));
     if(id==='efMonths') state.efMonths = Math.max(1, Math.round(state.efMonths));
+    if(id==='horizonYears') state.horizonYears = Math.min(40, Math.max(1, Math.round(state.horizonYears)));
+    if(id==='horizonYears') buildScenarios();
     updateComputed(); save();
   });
 });
@@ -937,15 +963,61 @@ function monthlyRepayment(loanAmount, annualRatePct, years){
   return loanAmount * r * Math.pow(1+r,n) / (Math.pow(1+r,n) - 1);
 }
 
+// Saldo restante de un crédito P&I estándar tras N meses pagados.
+function remainingBalancePI(loanAmount, annualRatePct, years, monthsElapsed){
+  const r = (annualRatePct/100)/12;
+  const n = years*12;
+  const m = Math.min(monthsElapsed, n);
+  if(loanAmount <= 0 || n <= 0) return 0;
+  if(r === 0) return Math.max(0, loanAmount * (1 - m/n));
+  const factor = Math.pow(1+r, m);
+  const pay = monthlyRepayment(loanAmount, annualRatePct, years);
+  return Math.max(0, loanAmount*factor - pay*((factor-1)/r));
+}
+// Saldo restante considerando un tramo inicial de solo-interés (no baja el capital)
+// seguido de amortización P&I normal por el resto del plazo.
+function remainingBalance(loanAmount, annualRatePct, years, ioYears, horizonYears){
+  const io = Math.min(ioYears||0, years);
+  if(horizonYears <= io) return loanAmount; // aún en fase solo-interés, capital intacto
+  const piYears = years - io;
+  const monthsIntoPI = (horizonYears - io) * 12;
+  return remainingBalancePI(loanAmount, annualRatePct, piYears, monthsIntoPI);
+}
+// Cuota actual (hoy) de una propiedad, respetando si está en fase solo-interés.
+function currentRepayment(p, financedLoan){
+  if(p.interestOnly && (p.ioYears||0) > 0){
+    return financedLoan * (p.rate/100) / 12;
+  }
+  return monthlyRepayment(financedLoan, p.rate, p.years);
+}
+// Máximo préstamo que un presupuesto mensual (a la tasa de estrés) alcanza a pagar — Borrowing Power.
+function maxLoanFromBudget(monthlyBudget, annualRatePct, years){
+  const r = (annualRatePct/100)/12;
+  const n = years*12;
+  if(monthlyBudget <= 0 || n <= 0) return 0;
+  if(r === 0) return monthlyBudget * n;
+  return monthlyBudget * (1 - Math.pow(1+r, -n)) / r;
+}
+function borrowingPower(){
+  const capMonthly = capacityMonthly();
+  const budget = Math.max(0, capMonthly * 0.9); // margen de seguridad 10%
+  const assumedRate = 6.0; // tasa de referencia; ajusta según oferta real del banco
+  const loan = maxLoanFromBudget(budget, assumedRate + SERVICEABILITY_BUFFER, 30);
+  return { loan, budget, assumedRate };
+}
+
 function calcScenario(sc){
   let totalPrice=0, totalDeposit=0, totalClosing=0, totalExtra=0, totalRepayment=0, totalStressRepayment=0;
   let totalLoanForLVR=0, totalLMI=0, lmiUpfront=0, hgCount=0, totalStampDuty=0;
+  let totalRenoBudget=0, totalWeeklyRent=0, totalProjectedValue=0, totalProjectedLoan=0;
+  const horizon = state.horizonYears || 10;
   sc.properties.forEach(p=>{
     totalPrice += p.price;
     const depositAmt = p.price * (p.deposit/100);
     totalDeposit += depositAmt;
     totalClosing += p.price * (p.closing/100);
     totalExtra += p.extra;
+    totalRenoBudget += (p.renoBudget||0);
     totalStampDuty += estimateStampDuty(p.price, p.stampState, p.firstHomeBuyer);
     const loanAmount = p.price - depositAmt;
     const lvr = p.price > 0 ? (loanAmount / p.price) * 100 : 0;
@@ -958,11 +1030,23 @@ function calcScenario(sc){
     // en vez de pagarse al contado. Si el usuario prefiere pagarlo al contado, se suma al upfront.
     const financedLoan = p.financeLMI ? loanAmount + lmi : loanAmount;
     if(!p.financeLMI) lmiUpfront += lmi;
-    totalRepayment += monthlyRepayment(financedLoan, p.rate, p.years);
+    totalRepayment += currentRepayment(p, financedLoan);
     // El banco no te evalúa a la tasa real, sino a la tasa real + buffer de servicio (APRA).
     totalStressRepayment += monthlyRepayment(financedLoan, p.rate + SERVICEABILITY_BUFFER, p.years);
+    if(p.isInvestment) totalWeeklyRent += (p.weeklyRent||0);
+    // Rentabilidad proyectada: valor de mercado inicial = precio + valor agregado por remodelación,
+    // crecido al ritmo estimado anual hasta el horizonte elegido.
+    const startValue = p.price + (p.renoValueAdd||0);
+    totalProjectedValue += startValue * Math.pow(1 + (p.capGrowth||0)/100, horizon);
+    totalProjectedLoan += remainingBalance(financedLoan, p.rate, p.years, p.interestOnly ? (p.ioYears||0) : 0, horizon);
   });
-  const totalUpfront = totalDeposit + totalClosing + totalExtra + lmiUpfront + totalStampDuty;
+  const totalUpfront = totalDeposit + totalClosing + totalExtra + lmiUpfront + totalStampDuty + totalRenoBudget;
+  const totalProjectedEquity = Math.max(0, totalProjectedValue - totalProjectedLoan);
+  const annualizedReturn = (totalUpfront > 0 && horizon > 0)
+    ? (Math.pow(totalProjectedEquity / totalUpfront, 1/horizon) - 1) * 100
+    : 0;
+  const monthlyRentIncome = (totalWeeklyRent * 52) / 12;
+  const netMonthlyCashflow = monthlyRentIncome - totalRepayment;
   const avgLVR = totalPrice > 0 ? (totalLoanForLVR / totalPrice) * 100 : 0;
   const gap = Math.max(0, totalUpfront - totalSavingsCash());
   const monthsLeft = state.months || 1;
@@ -982,7 +1066,9 @@ function calcScenario(sc){
   return { totalPrice, totalUpfront, gap, reqMonthly, reqWeekly, viable, pct, capMonthly,
     totalRepayment, repaymentWeekly, incomeAfterRepayment, repaymentFits,
     rentReplace, totalStressRepayment, stressRepaymentWeekly, stressIncomeAfterRepayment, bankApproves,
-    avgLVR, totalLMI, hgCount, totalStampDuty };
+    avgLVR, totalLMI, hgCount, totalStampDuty,
+    totalProjectedValue, totalProjectedLoan, totalProjectedEquity, annualizedReturn,
+    monthlyRentIncome, netMonthlyCashflow, totalWeeklyRent };
 }
 
 function propHTML(sc, p, idx){
@@ -1003,6 +1089,17 @@ function propHTML(sc, p, idx){
         <div class="field"><label>Home Guarantee Scheme (5% pie, sin LMI)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Programa del gobierno que permite comprar con 5% de pie sin pagar LMI, si califican. Confirma elegibilidad real antes de confiar en este número — ver la página Guía.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="homeGuarantee"><option value="false" ${!p.homeGuarantee?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.homeGuarantee?'selected':''}>Sí — elegible confirmado</option></select></div>
         <div class="field"><label>Estado / Territorio<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Define la tasa de stamp duty estimada. Son promedios de referencia, no el cálculo exacto de cada oficina de rentas — confirma la cifra real antes de decidir.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="stampState">${['NSW','VIC','QLD','WA','SA','TAS','NT','ACT'].map(s=>`<option value="${s}" ${p.stampState===s?'selected':''}>${s}</option>`).join('')}</select></div>
         <div class="field"><label>Primer comprador (concesión stamp duty)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Si aplica, la app ya modela la exención de ACT y la de NSW (hasta $800k). Los demás estados muestran la tasa estándar sin descuento.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="firstHomeBuyer"><option value="false" ${!p.firstHomeBuyer?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.firstHomeBuyer?'selected':''}>Sí — elegible confirmado</option></select></div>
+      </div>
+      <div class="prop-head" style="margin-top:14px;"><span class="tag" style="background:var(--green-soft);color:var(--green);">Rentabilidad y estrategia</span></div>
+      <div class="grid6">
+        <div class="field"><label>Estrategia<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Informativo, para comparar tipos de compra en el resumen — no cambia el cálculo de stamp duty automáticamente (ajústalo tú si aplica un descuento distinto por vivienda nueva).</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="strategy"><option value="usada" ${p.strategy==='usada'?'selected':''}>Vivienda usada</option><option value="nueva" ${p.strategy==='nueva'?'selected':''}>Vivienda nueva</option><option value="houseAndLand" ${p.strategy==='houseAndLand'?'selected':''}>House & land package</option><option value="remodel" ${p.strategy==='remodel'?'selected':''}>Comprar y remodelar</option></select></div>
+        <div class="field"><label>Crecimiento anual estimado (%)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Supuesto tuyo de plusvalía anual del suburbio/tipo de propiedad. Cámbialo para ver sensibilidad — no es una proyección garantizada.</span></span></label><input type="number" step="0.1" value="${p.capGrowth}" data-sc="${sc.id}" data-idx="${idx}" data-field="capGrowth"></div>
+        <div class="field"><label>Presupuesto remodelación<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Solo si la estrategia es "Comprar y remodelar". Se suma al capital necesario al contado.</span></span></label><input type="number" min="0" value="${p.renoBudget||0}" data-sc="${sc.id}" data-idx="${idx}" data-field="renoBudget"></div>
+        <div class="field"><label>Valor agregado por remodelación<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Cuánto sube el valor de mercado inmediatamente después de remodelar (ARV - precio de compra). Se suma al valor inicial antes de aplicar el crecimiento anual.</span></span></label><input type="number" min="0" value="${p.renoValueAdd||0}" data-sc="${sc.id}" data-idx="${idx}" data-field="renoValueAdd"></div>
+        <div class="field"><label>Propiedad de inversión (genera renta)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="isInvestment"><option value="false" ${!p.isInvestment?'selected':''}>No — vivienda propia</option><option value="true" ${p.isInvestment?'selected':''}>Sí — arriendo a terceros</option></select></div>
+        <div class="field"><label>Renta semanal estimada<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Solo aplica si es propiedad de inversión.</span></span></label><input type="number" min="0" value="${p.weeklyRent||0}" data-sc="${sc.id}" data-idx="${idx}" data-field="weeklyRent"></div>
+        <div class="field"><label>Crédito solo-interés (Interest Only)</label><select data-sc="${sc.id}" data-idx="${idx}" data-field="interestOnly"><option value="false" ${!p.interestOnly?'selected':''}>No — capital + interés desde el inicio</option><option value="true" ${p.interestOnly?'selected':''}>Sí — solo interés al inicio</option></select></div>
+        <div class="field"><label>Años en fase solo-interés<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Duración típica: 1 a 5 años. Durante esta fase la cuota es más baja pero el capital no baja.</span></span></label><input type="number" min="0" max="10" value="${p.ioYears||0}" data-sc="${sc.id}" data-idx="${idx}" data-field="ioYears"></div>
       </div>
     </div>`;
 }
@@ -1034,6 +1131,13 @@ function scenarioHTML(sc){
         <div class="rbox"><div class="lbl">LVR promedio<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Qué porcentaje del precio están pidiendo prestado. Por encima de 80% normalmente se paga LMI.</span></span></div><div class="val" id="lvr-${sc.id}">0%</div></div>
         <div class="rbox"><div class="lbl">LMI estimado (aprox.)</div><div class="val" id="lmi-${sc.id}">$0</div></div>
         <div class="rbox"><div class="lbl">Stamp duty estimado (aprox.)</div><div class="val" id="sd-${sc.id}">$0</div></div>
+      </div>
+      <div class="results-grid" style="margin-top:10px; border-top:1px solid var(--line); padding-top:14px;">
+        <div class="rbox"><div class="lbl">Valor proyectado (${state.horizonYears||10} años)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Precio + valor agregado por remodelación, crecido al ritmo anual estimado en cada propiedad. Supuesto tuyo, no una garantía.</span></span></div><div class="val" id="pv-${sc.id}">$0</div></div>
+        <div class="rbox"><div class="lbl">Equity proyectado (${state.horizonYears||10} años)</div><div class="val" id="pe-${sc.id}">$0</div></div>
+        <div class="rbox"><div class="lbl">Retorno anualizado sobre capital (aprox.)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Crecimiento del equity proyectado vs. el capital que pusiste (upfront), expresado como tasa anual compuesta. No descuenta intereses pagados ni gastos de tenencia — es una métrica comparativa entre escenarios, no un retorno neto real.</span></span></div><div class="val" id="ar-${sc.id}">0%</div></div>
+        <div class="rbox"><div class="lbl">Renta semanal total</div><div class="val" id="rt-${sc.id}">$0</div></div>
+        <div class="rbox"><div class="lbl">Flujo neto mensual (renta − cuota)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Positivo = "positively geared" (la renta cubre la cuota). Negativo = "negatively geared" (pones dinero extra cada mes, común en Australia por el beneficio tributario, pero confirma con tu contador).</span></span></div><div class="val" id="ncf-${sc.id}">$0</div></div>
       </div>
       <div class="gauge-wrap">
         <div class="gauge-track"><div class="gauge-fill" id="gf-${sc.id}" style="width:0%;"></div></div>
@@ -1072,16 +1176,17 @@ function setupScenarioDelegation(){
     if(t.dataset.field && t.dataset.sc){
       const sc = state.scenarios.find(s=>s.id===t.dataset.sc);
       const idx = parseInt(t.dataset.idx);
-      if(t.dataset.field === 'financeLMI' || t.dataset.field === 'homeGuarantee' || t.dataset.field === 'firstHomeBuyer'){
+      if(t.dataset.field === 'financeLMI' || t.dataset.field === 'homeGuarantee' || t.dataset.field === 'firstHomeBuyer' || t.dataset.field === 'isInvestment' || t.dataset.field === 'interestOnly'){
         sc.properties[idx][t.dataset.field] = (t.value === 'true');
-      } else if(t.dataset.field === 'stampState'){
-        sc.properties[idx].stampState = t.value;
+      } else if(t.dataset.field === 'stampState' || t.dataset.field === 'strategy'){
+        sc.properties[idx][t.dataset.field] = t.value;
       } else {
         let val = parseFloat(t.value) || 0;
         if(t.dataset.field === 'deposit' || t.dataset.field === 'closing') val = Math.min(100, Math.max(0, val));
         if(t.dataset.field === 'rate') val = Math.max(0, val);
         if(t.dataset.field === 'years') val = Math.max(1, Math.round(val));
-        if(t.dataset.field === 'price' || t.dataset.field === 'extra') val = Math.max(0, val);
+        if(t.dataset.field === 'price' || t.dataset.field === 'extra' || t.dataset.field === 'renoBudget' || t.dataset.field === 'renoValueAdd' || t.dataset.field === 'weeklyRent') val = Math.max(0, val);
+        if(t.dataset.field === 'ioYears') val = Math.max(0, Math.min(10, Math.round(val)));
         sc.properties[idx][t.dataset.field] = val;
       }
       updateComputed(); save();
@@ -1173,6 +1278,11 @@ function updateComputed(){
   $('kpiEf').style.color = efSurplus >= 0 ? 'var(--green)' : 'var(--red)';
   $('kpiScore').textContent = score;
 
+  const bp = borrowingPower();
+  $('bpLoan').textContent = fmt(bp.loan);
+  $('bpBudget').textContent = fmt(bp.budget);
+  $('bpRate').textContent = (bp.assumedRate + SERVICEABILITY_BUFFER).toFixed(1) + '% (' + bp.assumedRate.toFixed(1) + '% + buffer)';
+
   const rows = state.scenarios.map(sc=>({ sc, r: calcScenario(sc) }));
 
   renderRoute(rows);
@@ -1213,6 +1323,15 @@ function updateComputed(){
     lvrEl.style.color = r.avgLVR > 80 ? 'var(--red)' : 'var(--navy)';
     $('lmi-'+sc.id).textContent = r.totalLMI > 0 ? fmt(r.totalLMI) : 'No aplica (pie ≥20%)';
     $('sd-'+sc.id).textContent = r.totalStampDuty > 0 ? fmt(r.totalStampDuty) : '$0 (concesión aplicada)';
+    $('pv-'+sc.id).textContent = fmt(r.totalProjectedValue);
+    $('pe-'+sc.id).textContent = fmt(r.totalProjectedEquity);
+    const arEl = $('ar-'+sc.id);
+    arEl.textContent = r.annualizedReturn.toFixed(1) + '%';
+    arEl.style.color = r.annualizedReturn >= 0 ? 'var(--green)' : 'var(--red)';
+    $('rt-'+sc.id).textContent = fmt(r.totalWeeklyRent);
+    const ncfEl = $('ncf-'+sc.id);
+    ncfEl.textContent = fmt(r.netMonthlyCashflow);
+    ncfEl.style.color = r.netMonthlyCashflow >= 0 ? 'var(--green)' : 'var(--red)';
     $('gf-'+sc.id).style.width = Math.min(100,r.pct)+'%';
     $('gf-'+sc.id).style.background = r.viable ? 'var(--green)' : 'var(--red)';
     $('gl-'+sc.id).textContent = `Requerido vs. capacidad mensual (${Math.round(r.pct)}%)`;
@@ -1223,9 +1342,11 @@ function updateComputed(){
   });
 
   const minReq = Math.min(...rows.map(x=>x.r.reqMonthly));
-  let html = `<tr><th>Escenario</th><th>Total upfront</th><th>Ahorro semanal req.</th><th>Cuota crédito mensual</th><th>Cuota banco (+3%)</th><th>Ingreso libre post-cuota</th><th>Estado</th><th>Banco</th></tr>`;
+  const maxReturn = rows.length ? Math.max(...rows.map(x=>x.r.annualizedReturn)) : null;
+  let html = `<tr><th>Escenario</th><th>Total upfront</th><th>Ahorro semanal req.</th><th>Cuota crédito mensual</th><th>Cuota banco (+3%)</th><th>Ingreso libre post-cuota</th><th>Equity proy. (${state.horizonYears||10}a)</th><th>Retorno anualizado</th><th>Estado</th><th>Banco</th></tr>`;
   rows.forEach(({sc,r})=>{
     const best = r.viable && r.reqMonthly === minReq;
+    const bestReturn = r.annualizedReturn === maxReturn;
     html += `<tr class="${best?'best':''}">
       <td>${sc.name}</td>
       <td class="num">${fmt(r.totalUpfront)}</td>
@@ -1233,6 +1354,8 @@ function updateComputed(){
       <td class="num">${fmt(r.totalRepayment)}</td>
       <td class="num">${fmt(r.totalStressRepayment)}</td>
       <td class="num">${fmt(r.incomeAfterRepayment)}</td>
+      <td class="num">${fmt(r.totalProjectedEquity)}</td>
+      <td class="num" style="${bestReturn?'font-weight:700;color:var(--green);':''}">${r.annualizedReturn.toFixed(1)}%</td>
       <td>${r.viable ? '✔ Viable' : '✘ Ajustar'}</td>
       <td>${r.bankApproves ? '✔ Probable' : '✘ Ajustar'}</td>
     </tr>`;
