@@ -825,7 +825,7 @@ let state = {
 
 function newProperty(){
   return { price:600000, deposit:20, closing:5, extra:2000, rate:6.0, years:30, financeLMI:true, homeGuarantee:false, stampState:'NSW', firstHomeBuyer:false,
-    strategy:'usada', capGrowth:5, isInvestment:false, weeklyRent:0, interestOnly:false, ioYears:0, renoBudget:0, renoValueAdd:0 };
+    strategy:'usada', capGrowth:5, isInvestment:false, weeklyRent:0, interestOnly:false, ioYears:0, renoBudget:0, renoValueAdd:0, landSharePct:40 };
 }
 function newScenario(name){
   return { id: crypto.randomUUID(), name: name || 'Escenario', properties:[newProperty()], rentReplace:0 };
@@ -850,8 +850,35 @@ function estimateLMI(loanAmount, lvrPct){
 // Son promedios de referencia, NO el cálculo exacto por tramos de cada revenue office.
 // Confirma la cifra real con la oficina de rentas de tu estado/territorio antes de decidir.
 const STAMP_DUTY_RATE = { NSW:0.045, VIC:0.055, QLD:0.038, WA:0.049, SA:0.043, TAS:0.040, NT:0.049, ACT:0.045 };
-function estimateStampDuty(price, stateCode, firstHomeBuyer){
+// Nota general: las concesiones abajo reflejan la normativa vigente aprox. a mediados de 2026 —
+// varias tienen fecha de vencimiento o están sujetas a aprobación parlamentaria. Confirma la vigencia
+// real con la oficina de rentas del estado antes de decidir; son estimaciones de referencia, no un cálculo oficial.
+function estimateStampDuty(p){
+  const price = p.price, stateCode = p.stampState, firstHomeBuyer = p.firstHomeBuyer;
+  const isNewBuild = (p.strategy === 'nueva' || p.strategy === 'houseAndLand');
   let duty = price * (STAMP_DUTY_RATE[stateCode] || 0.045);
+
+  // NT — House and Land Package Exemption: exención total en house & land nuevo (uso como vivienda propia).
+  // Vigente hasta jun-2027. No es exclusiva de primer comprador — confirma requisito de ocupación.
+  if(stateCode === 'NT' && p.strategy === 'houseAndLand'){
+    return 0;
+  }
+
+  // VIC — concesión off-the-plan: el duty se calcula solo sobre el valor del terreno al momento del
+  // contrato, no sobre el precio total construido (se descuenta el costo de construcción). Aproximamos
+  // asumiendo que "landSharePct" del precio es terreno. Vigente hasta 20-abr-2027 (sujeto a legislación).
+  if(stateCode === 'VIC' && p.strategy === 'nueva'){
+    const landShare = Math.min(100, Math.max(0, p.landSharePct ?? 40)) / 100;
+    duty = (price * landShare) * (STAMP_DUTY_RATE.VIC || 0.055);
+  }
+
+  // WA — concesión off-the-plan: reduce el duty ya calculado en 50%, tope $50,000. Solo aplica a
+  // estrata (aptos/townhouses) — un house & land package freehold NO califica en WA.
+  // Contratos hasta 30-jun-2026 (posible extensión a 2028, pendiente de aprobación parlamentaria).
+  if(stateCode === 'WA' && p.strategy === 'nueva'){
+    duty -= Math.min(duty * 0.5, 50000);
+  }
+
   if(firstHomeBuyer){
     if(stateCode === 'ACT'){
       // Home Buyer Concession Scheme: exento desde 1 jul 2026, sin tope de ingreso ni de precio,
@@ -861,9 +888,27 @@ function estimateStampDuty(price, stateCode, firstHomeBuyer){
       // Exención total hasta $800k, concesión decreciente hasta $1M (aproximado).
       if(price <= 800000) duty = 0;
       else if(price <= 1000000) duty = duty * ((price - 800000) / 200000);
+    } else if(stateCode === 'VIC'){
+      // Exento hasta $600k, concesión decreciente hasta $750k.
+      if(price <= 600000) duty = 0;
+      else if(price <= 750000) duty = duty * ((price - 600000) / 150000);
+    } else if(stateCode === 'WA'){
+      // First Home Owner Rate: exento hasta $600k, concesión hasta $800k (vigente 2026-27).
+      if(price <= 600000) duty = 0;
+      else if(price <= 800000) duty = Math.min(duty, (price - 600000) * 0.1615);
+    } else if(stateCode === 'TAS'){
+      // Exención total hasta $750k (cualquier vivienda, nueva o usada; vigente hasta jun-2026).
+      if(price <= 750000) duty = 0;
+    } else if(stateCode === 'QLD'){
+      // Bajo $550k, efectivamente $0. Entre $550k-$700k, concesión decreciente (aproximado).
+      if(price <= 550000) duty = 0;
+      else if(price <= 700000) duty = duty * ((price - 550000) / 150000);
+    } else if(stateCode === 'SA' && isNewBuild){
+      // Vivienda nueva (incl. house & land) para primer comprador: $0 sin tope de precio, desde jun-2024.
+      duty = 0;
     }
-    // Otros estados/territorios tienen sus propias concesiones de primer comprador
-    // que no están modeladas aquí — confirma con la oficina de rentas correspondiente.
+    // Otros casos (SA vivienda usada, NT) no tienen concesión de primer comprador modelada aquí —
+    // confirma con la oficina de rentas correspondiente.
   }
   return Math.max(0, duty);
 }
@@ -916,6 +961,7 @@ async function load(){
         if(p.ioYears === undefined) p.ioYears = 0;
         if(p.renoBudget === undefined) p.renoBudget = 0;
         if(p.renoValueAdd === undefined) p.renoValueAdd = 0;
+        if(p.landSharePct === undefined) p.landSharePct = 40;
       });
     });
   }
@@ -1094,7 +1140,7 @@ function calcScenario(sc){
     totalClosing += p.price * (p.closing/100);
     totalExtra += p.extra;
     totalRenoBudget += (p.renoBudget||0);
-    totalStampDuty += estimateStampDuty(p.price, p.stampState, p.firstHomeBuyer);
+    totalStampDuty += estimateStampDuty(p);
     const loanAmount = p.price - depositAmt;
     const lvr = p.price > 0 ? (loanAmount / p.price) * 100 : 0;
     // El Home Guarantee Scheme reemplaza el LMI con una garantía del gobierno: no se paga LMI.
@@ -1168,11 +1214,12 @@ function propHTML(sc, p, idx){
         <div class="field"><label>Financiar LMI en el crédito (si pie &lt;20%)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">El LMI es un seguro que protege al banco cuando el pie es menor al 20%. "Financiar" lo suma a la cuota; "pagar al contado" lo suma al upfront.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="financeLMI"><option value="true" ${p.financeLMI?'selected':''}>Sí — capitalizarlo en la cuota</option><option value="false" ${!p.financeLMI?'selected':''}>No — pagarlo al contado</option></select></div>
         <div class="field"><label>Home Guarantee Scheme (5% pie, sin LMI)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Programa del gobierno que permite comprar con 5% de pie sin pagar LMI, si califican. Confirma elegibilidad real antes de confiar en este número — ver la página Guía.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="homeGuarantee"><option value="false" ${!p.homeGuarantee?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.homeGuarantee?'selected':''}>Sí — elegible confirmado</option></select></div>
         <div class="field"><label>Estado / Territorio<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Define la tasa de stamp duty estimada. Son promedios de referencia, no el cálculo exacto de cada oficina de rentas — confirma la cifra real antes de decidir.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="stampState">${['NSW','VIC','QLD','WA','SA','TAS','NT','ACT'].map(s=>`<option value="${s}" ${p.stampState===s?'selected':''}>${s}</option>`).join('')}</select></div>
-        <div class="field"><label>Primer comprador (concesión stamp duty)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Si aplica, la app ya modela la exención de ACT y la de NSW (hasta $800k). Los demás estados muestran la tasa estándar sin descuento.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="firstHomeBuyer"><option value="false" ${!p.firstHomeBuyer?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.firstHomeBuyer?'selected':''}>Sí — elegible confirmado</option></select></div>
+        <div class="field"><label>Primer comprador (concesión stamp duty)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">La app modela la concesión de primer comprador en ACT, NSW, VIC, WA, TAS, QLD, y SA (solo vivienda nueva/house&land). NT no tiene concesión de primer comprador modelada. Confirma elegibilidad exacta antes de decidir.</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="firstHomeBuyer"><option value="false" ${!p.firstHomeBuyer?'selected':''}>No aplica / no confirmado</option><option value="true" ${p.firstHomeBuyer?'selected':''}>Sí — elegible confirmado</option></select></div>
       </div>
       <div class="prop-head" style="margin-top:14px;"><span class="tag" style="background:var(--green-soft);color:var(--green);">Rentabilidad y estrategia</span></div>
       <div class="grid6">
-        <div class="field"><label>Estrategia<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Informativo, para comparar tipos de compra en el resumen — no cambia el cálculo de stamp duty automáticamente (ajústalo tú si aplica un descuento distinto por vivienda nueva).</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="strategy"><option value="usada" ${p.strategy==='usada'?'selected':''}>Vivienda usada</option><option value="nueva" ${p.strategy==='nueva'?'selected':''}>Vivienda nueva</option><option value="houseAndLand" ${p.strategy==='houseAndLand'?'selected':''}>House & land package</option><option value="remodel" ${p.strategy==='remodel'?'selected':''}>Comprar y remodelar</option></select></div>
+        <div class="field"><label>Estrategia<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Informativo, para comparar tipos de compra en el resumen — y ahora también ajusta el stamp duty: vivienda nueva y house & land tienen concesiones propias en VIC, WA, NT y SA (primer comprador).</span></span></label><select data-sc="${sc.id}" data-idx="${idx}" data-field="strategy"><option value="usada" ${p.strategy==='usada'?'selected':''}>Vivienda usada</option><option value="nueva" ${p.strategy==='nueva'?'selected':''}>Vivienda nueva</option><option value="houseAndLand" ${p.strategy==='houseAndLand'?'selected':''}>House & land package</option><option value="remodel" ${p.strategy==='remodel'?'selected':''}>Comprar y remodelar</option></select></div>
+        <div class="field"><label>% terreno del precio (solo VIC + nueva)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Solo se usa si Estado=VIC y Estrategia=Vivienda nueva (off-the-plan). VIC calcula el stamp duty solo sobre el valor del terreno al momento del contrato, no sobre el precio total construido. Ajusta este % si conoces el valor real del terreno; si no, 40% es un supuesto razonable de referencia.</span></span></label><input type="number" min="0" max="100" value="${p.landSharePct||40}" data-sc="${sc.id}" data-idx="${idx}" data-field="landSharePct"></div>
         <div class="field"><label>Crecimiento anual estimado (%)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Supuesto tuyo de plusvalía anual del suburbio/tipo de propiedad. Cámbialo para ver sensibilidad — no es una proyección garantizada.</span></span></label><input type="number" step="0.1" value="${p.capGrowth}" data-sc="${sc.id}" data-idx="${idx}" data-field="capGrowth"></div>
         <div class="field"><label>Presupuesto remodelación<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Solo si la estrategia es "Comprar y remodelar". Se suma al capital necesario al contado.</span></span></label><input type="number" min="0" value="${p.renoBudget||0}" data-sc="${sc.id}" data-idx="${idx}" data-field="renoBudget"></div>
         <div class="field"><label>Valor agregado por remodelación<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Cuánto sube el valor de mercado inmediatamente después de remodelar (ARV - precio de compra). Se suma al valor inicial antes de aplicar el crecimiento anual.</span></span></label><input type="number" min="0" value="${p.renoValueAdd||0}" data-sc="${sc.id}" data-idx="${idx}" data-field="renoValueAdd"></div>
@@ -1267,6 +1314,7 @@ function setupScenarioDelegation(){
         if(t.dataset.field === 'rate') val = Math.max(0, val);
         if(t.dataset.field === 'years') val = Math.max(1, Math.round(val));
         if(t.dataset.field === 'price' || t.dataset.field === 'extra' || t.dataset.field === 'renoBudget' || t.dataset.field === 'renoValueAdd' || t.dataset.field === 'weeklyRent') val = Math.max(0, val);
+        if(t.dataset.field === 'landSharePct') val = Math.min(100, Math.max(0, val));
         if(t.dataset.field === 'ioYears') val = Math.max(0, Math.min(10, Math.round(val)));
         sc.properties[idx][t.dataset.field] = val;
       }
