@@ -658,6 +658,14 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       </div>
 
       <div class="card">
+        <h2>Importar desde un escenario<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Copia el crédito, tasa, plazo, cuota y capital de un escenario de la página Escenarios directamente a las calculadoras de abajo, para no tener que escribirlos a mano.</span></span></h2>
+        <div class="grid6">
+          <div class="field"><label>Escenario</label><select id="optImportScenario"></select></div>
+          <div class="field" style="align-self:flex-end;"><button class="btn ghost" id="optImportBtn">Importar valores</button></div>
+        </div>
+      </div>
+
+      <div class="card">
         <h2>Pagos extra al crédito<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Simula cuánto tiempo e interés te ahorras si pagas un extra fijo cada mes, por encima de la cuota normal.</span></span></h2>
         <div class="grid6">
           <div class="field"><label>Saldo del crédito</label><input type="number" min="0" id="erLoan" value="480000"></div>
@@ -1077,6 +1085,7 @@ function calcScenario(sc){
   let totalPrice=0, totalDeposit=0, totalClosing=0, totalExtra=0, totalRepayment=0, totalStressRepayment=0;
   let totalLoanForLVR=0, totalLMI=0, lmiUpfront=0, hgCount=0, totalStampDuty=0;
   let totalRenoBudget=0, totalWeeklyRent=0, totalProjectedValue=0, totalProjectedLoan=0;
+  let weightedRate=0, weightedYears=0;
   const horizon = state.horizonYears || 10;
   sc.properties.forEach(p=>{
     totalPrice += p.price;
@@ -1092,6 +1101,8 @@ function calcScenario(sc){
     const lmi = p.homeGuarantee ? 0 : estimateLMI(loanAmount, lvr);
     if(p.homeGuarantee) hgCount++;
     totalLoanForLVR += loanAmount;
+    weightedRate += loanAmount * p.rate;
+    weightedYears += loanAmount * p.years;
     totalLMI += lmi;
     // Practica habitual: el LMI se capitaliza dentro del credito (sube la cuota un poco)
     // en vez de pagarse al contado. Si el usuario prefiere pagarlo al contado, se suma al upfront.
@@ -1115,6 +1126,8 @@ function calcScenario(sc){
   const monthlyRentIncome = (totalWeeklyRent * 52) / 12;
   const netMonthlyCashflow = monthlyRentIncome - totalRepayment;
   const avgLVR = totalPrice > 0 ? (totalLoanForLVR / totalPrice) * 100 : 0;
+  const avgRate = totalLoanForLVR > 0 ? weightedRate / totalLoanForLVR : 0;
+  const avgYears = totalLoanForLVR > 0 ? Math.round(weightedYears / totalLoanForLVR) : 30;
   const gap = Math.max(0, totalUpfront - totalSavingsCash());
   const monthsLeft = state.months || 1;
   const reqMonthly = gap / monthsLeft;
@@ -1135,7 +1148,7 @@ function calcScenario(sc){
     rentReplace, totalStressRepayment, stressRepaymentWeekly, stressIncomeAfterRepayment, bankApproves,
     avgLVR, totalLMI, hgCount, totalStampDuty,
     totalProjectedValue, totalProjectedLoan, totalProjectedEquity, annualizedReturn,
-    monthlyRentIncome, netMonthlyCashflow, totalWeeklyRent };
+    monthlyRentIncome, netMonthlyCashflow, totalWeeklyRent, totalLoanAmount: totalLoanForLVR, avgRate, avgYears };
 }
 
 function propHTML(sc, p, idx){
@@ -1222,6 +1235,7 @@ function scenarioHTML(sc){
 
 function buildScenarios(){
   $('scenarios').innerHTML = state.scenarios.map(scenarioHTML).join('');
+  refreshOptImportSelect();
 }
 
 function setupScenarioDelegation(){
@@ -1606,6 +1620,28 @@ function loadOptimizer(){
   updateOptimizer();
 }
 loadOptimizer();
+
+function refreshOptImportSelect(){
+  const sel = $('optImportScenario');
+  if(!sel) return;
+  sel.innerHTML = state.scenarios.map(sc=>`<option value="${sc.id}">${sc.name}</option>`).join('');
+}
+$('optImportBtn').addEventListener('click', ()=>{
+  const sc = state.scenarios.find(s=>s.id === $('optImportScenario').value);
+  if(!sc) return;
+  const r = calcScenario(sc);
+  $('erLoan').value = Math.round(r.totalLoanAmount);
+  $('erRate').value = r.avgRate.toFixed(2);
+  $('erYears').value = r.avgYears;
+  $('slLoan').value = Math.round(r.totalLoanAmount);
+  $('slYears').value = r.avgYears;
+  $('rvbDeposit').value = Math.round(r.totalUpfront);
+  $('rvbRepayment').value = Math.round(r.totalRepayment);
+  const data = {};
+  OPT_IDS.forEach(k=> data[k] = $(k).value);
+  localStorage.setItem(OPT_KEY, JSON.stringify(data));
+  updateOptimizer();
+});
 
 // ---------- Bitácora de decisiones ----------
 function newDecision(){ return { id: crypto.randomUUID(), date:'', decision:'', amount:0, notes:'' }; }
