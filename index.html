@@ -633,6 +633,28 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
         <div id="accountLines"></div>
         <div class="addrow"><button class="btn ghost small" id="addAccount">+ Agregar cuenta</button></div>
       </div>
+
+      <div class="card">
+        <h2>Superannuation<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">No es efectivo disponible hoy — se muestra aparte, solo para ver el patrimonio neto total. Proyección simple: saldo actual + aportes anuales, compuesto al crecimiento estimado.</span></span></h2>
+        <div id="superLines"></div>
+        <div class="addrow"><button class="btn ghost small" id="addSuper">+ Agregar fondo de super</button></div>
+      </div>
+
+      <div class="card">
+        <h2>CDT / plazo fijo (Colombia u otro país)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Certificados de depósito a término u otro plazo fijo en moneda extranjera. Se muestran en AUD al FX de hoy — no cuentan como efectivo disponible para el pie.</span></span></h2>
+        <div id="cdtLines"></div>
+        <div class="addrow"><button class="btn ghost small" id="addCdt">+ Agregar CDT</button></div>
+      </div>
+
+      <div class="card">
+        <h2>Otros activos<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Vehículos u otros bienes de valor conocido. Solo para el patrimonio neto total — no cuentan como efectivo disponible.</span></span></h2>
+        <div id="otherAssetLines"></div>
+        <div class="addrow"><button class="btn ghost small" id="addOtherAsset">+ Agregar activo</button></div>
+      </div>
+
+      <div class="card">
+        <div class="stat-row total"><span class="lbl">Patrimonio neto total<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Cuentas líquidas + Super + CDT + otros activos. La cifra completa de "qué tan ricos son hoy" — distinta del patrimonio líquido, que es lo único disponible para el pie.</span></span></span><span class="val" id="netWorthTotal">$0</span></div>
+      </div>
       <div class="card">
         <h2>Historial de patrimonio<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Guarda una foto del patrimonio líquido total una vez al mes, para ver la tendencia real con el tiempo.</span></span></h2>
         <div class="nw-chart-wrap" id="nwHistoryChart"></div>
@@ -851,7 +873,10 @@ let state = {
   oneOffs: [],
   decisions: [],
   propertyVisits: [],
-  netWorthHistory: []
+  netWorthHistory: [],
+  superAccounts: [],
+  cdtAccounts: [],
+  otherAssets: []
 };
 
 function newProperty(){
@@ -960,6 +985,9 @@ async function load(){
     ];
   }
   (state.accounts||[]).forEach(a=>{ if(a.purpose === undefined) a.purpose = 'deposito'; });
+  if(!state.superAccounts) state.superAccounts = [];
+  if(!state.cdtAccounts) state.cdtAccounts = [];
+  if(!state.otherAssets) state.otherAssets = [];
   if(!state.oneOffs) state.oneOffs = [];
   if(!state.decisions) state.decisions = [];
   if(!state.propertyVisits) state.propertyVisits = [];
@@ -1424,6 +1452,7 @@ function updateComputed(){
   const capMonthly = capacityMonthly();
   const savingsCash = totalSavingsCash();
   $('savingsTotal').textContent = fmt(savingsCash);
+  $('netWorthTotal').textContent = fmt(netWorthTotal());
   renderNetWorthHistory();
   $('capMonth').textContent = fmt(capMonthly);
   $('capWeek').textContent = fmt(capMonthly/4.33);
@@ -1566,6 +1595,110 @@ function setupAccountDelegation(){
   });
 }
 $('addAccount').addEventListener('click', ()=>{ state.accounts.push(newAccount()); buildAccounts(); updateComputed(); save(); });
+
+// ---------- Superannuation (informativo, no cuenta para el pie) ----------
+function newSuper(){ return { id: crypto.randomUUID(), owner:'', fund:'', balance:0, sgPct:12, annualContribution:0, growthPct:6 }; }
+function superHTML(s){
+  return `
+    <div class="prop" data-row="${s.id}">
+      <div class="prop-head"><span class="tag">Super</span><button class="rm" data-id="${s.id}" data-role="delSuper" title="Quitar" aria-label="Eliminar fondo de super">×</button></div>
+      <div class="grid6">
+        <div class="field"><label>Titular</label><input value="${s.owner}" data-id="${s.id}" data-field="owner"></div>
+        <div class="field"><label>Fondo</label><input value="${s.fund}" data-id="${s.id}" data-field="fund"></div>
+        <div class="field"><label>Saldo actual</label><input type="number" min="0" value="${s.balance}" data-id="${s.id}" data-field="balance"></div>
+        <div class="field"><label>Aporte anual (empleador + voluntario)</label><input type="number" min="0" value="${s.annualContribution}" data-id="${s.id}" data-field="annualContribution"></div>
+        <div class="field"><label>Crecimiento anual estimado (%)</label><input type="number" min="0" step="0.1" value="${s.growthPct}" data-id="${s.id}" data-field="growthPct"></div>
+      </div>
+    </div>`;
+}
+function buildSuper(){ $('superLines').innerHTML = (state.superAccounts||[]).map(superHTML).join(''); }
+function setupSuperDelegation(){
+  const wrap = $('superLines');
+  wrap.addEventListener('input', e=>{
+    const t = e.target; if(!t.dataset.field) return;
+    const s = state.superAccounts.find(x=>x.id===t.dataset.id);
+    const numeric = ['balance','sgPct','annualContribution','growthPct'].includes(t.dataset.field);
+    s[t.dataset.field] = numeric ? (parseFloat(t.value)||0) : t.value;
+    updateComputed(); save();
+  });
+  wrap.addEventListener('click', e=>{
+    if(e.target.dataset.role !== 'delSuper') return;
+    state.superAccounts = state.superAccounts.filter(x=>x.id!==e.target.dataset.id);
+    buildSuper(); updateComputed(); save();
+  });
+}
+$('addSuper').addEventListener('click', ()=>{ state.superAccounts.push(newSuper()); buildSuper(); updateComputed(); save(); });
+function totalSuper(){ return (state.superAccounts||[]).reduce((s,a)=>s+(a.balance||0),0); }
+
+// ---------- CDT / plazo fijo en moneda extranjera (informativo) ----------
+function newCdt(){ return { id: crypto.randomUUID(), name:'CDT', bank:'', principal:0, eaRate:10, maturityDate:'', fx:0 }; }
+function cdtHTML(c){
+  return `
+    <div class="prop" data-row="${c.id}">
+      <div class="prop-head"><span class="tag">CDT</span><button class="rm" data-id="${c.id}" data-role="delCdt" title="Quitar" aria-label="Eliminar CDT">×</button></div>
+      <div class="grid6">
+        <div class="field"><label>Nombre</label><input value="${c.name}" data-id="${c.id}" data-field="name"></div>
+        <div class="field"><label>Banco</label><input value="${c.bank}" data-id="${c.id}" data-field="bank"></div>
+        <div class="field"><label>Principal (moneda local, ej. COP)</label><input type="number" min="0" value="${c.principal}" data-id="${c.id}" data-field="principal"></div>
+        <div class="field"><label>Tasa efectiva anual (%)</label><input type="number" min="0" step="0.1" value="${c.eaRate}" data-id="${c.id}" data-field="eaRate"></div>
+        <div class="field"><label>Fecha de vencimiento</label><input type="date" value="${c.maturityDate}" data-id="${c.id}" data-field="maturityDate"></div>
+        <div class="field"><label>FX (moneda local por AUD)</label><input type="number" min="0" value="${c.fx||0}" data-id="${c.id}" data-field="fx"></div>
+      </div>
+    </div>`;
+}
+function buildCdt(){ $('cdtLines').innerHTML = (state.cdtAccounts||[]).map(cdtHTML).join(''); }
+function setupCdtDelegation(){
+  const wrap = $('cdtLines');
+  wrap.addEventListener('input', e=>{
+    const t = e.target; if(!t.dataset.field) return;
+    const c = state.cdtAccounts.find(x=>x.id===t.dataset.id);
+    const numeric = ['principal','eaRate','fx'].includes(t.dataset.field);
+    c[t.dataset.field] = numeric ? (parseFloat(t.value)||0) : t.value;
+    updateComputed(); save();
+  });
+  wrap.addEventListener('click', e=>{
+    if(e.target.dataset.role !== 'delCdt') return;
+    state.cdtAccounts = state.cdtAccounts.filter(x=>x.id!==e.target.dataset.id);
+    buildCdt(); updateComputed(); save();
+  });
+}
+$('addCdt').addEventListener('click', ()=>{ state.cdtAccounts.push(newCdt()); buildCdt(); updateComputed(); save(); });
+// Valor de hoy en AUD (al FX ingresado) — no proyecta la tasa, es el valor actual del principal.
+function totalCdtAUD(){
+  return (state.cdtAccounts||[]).reduce((sum,c)=> sum + ((c.fx>0) ? (c.principal||0)/c.fx : 0), 0);
+}
+
+// ---------- Otros activos (vehículos, etc.) ----------
+function newOtherAsset(){ return { id: crypto.randomUUID(), name:'Vehículo', value:0 }; }
+function otherAssetHTML(o){
+  return `
+    <div class="prop" data-row="${o.id}">
+      <div class="prop-head"><span class="tag">Activo</span><button class="rm" data-id="${o.id}" data-role="delOtherAsset" title="Quitar" aria-label="Eliminar activo">×</button></div>
+      <div class="grid6">
+        <div class="field"><label>Nombre</label><input value="${o.name}" data-id="${o.id}" data-field="name"></div>
+        <div class="field"><label>Valor estimado (AUD)</label><input type="number" min="0" value="${o.value}" data-id="${o.id}" data-field="value"></div>
+      </div>
+    </div>`;
+}
+function buildOtherAssets(){ $('otherAssetLines').innerHTML = (state.otherAssets||[]).map(otherAssetHTML).join(''); }
+function setupOtherAssetDelegation(){
+  const wrap = $('otherAssetLines');
+  wrap.addEventListener('input', e=>{
+    const t = e.target; if(!t.dataset.field) return;
+    const o = state.otherAssets.find(x=>x.id===t.dataset.id);
+    o[t.dataset.field] = t.dataset.field==='value' ? (parseFloat(t.value)||0) : t.value;
+    updateComputed(); save();
+  });
+  wrap.addEventListener('click', e=>{
+    if(e.target.dataset.role !== 'delOtherAsset') return;
+    state.otherAssets = state.otherAssets.filter(x=>x.id!==e.target.dataset.id);
+    buildOtherAssets(); updateComputed(); save();
+  });
+}
+$('addOtherAsset').addEventListener('click', ()=>{ state.otherAssets.push(newOtherAsset()); buildOtherAssets(); updateComputed(); save(); });
+function totalOtherAssets(){ return (state.otherAssets||[]).reduce((s,a)=>s+(a.value||0),0); }
+
+function netWorthTotal(){ return totalSavingsCash() + totalSuper() + totalCdtAUD() + totalOtherAssets(); }
 
 // ---------- Costos puntuales / flujo de caja ----------
 function newOneOff(){ return { id: crypto.randomUUID(), name:'Costo puntual', amount:0, month:1 }; }
@@ -2025,6 +2158,9 @@ function renderAll(){
   buildLines('expenseLines', state.expenses, 'expense');
   buildScenarios();
   buildAccounts();
+  buildSuper();
+  buildCdt();
+  buildOtherAssets();
   buildOneOffs();
   buildDecisions();
   buildVisits();
@@ -2032,6 +2168,9 @@ function renderAll(){
   setupLineDelegation('expenseLines');
   setupScenarioDelegation();
   setupAccountDelegation();
+  setupSuperDelegation();
+  setupCdtDelegation();
+  setupOtherAssetDelegation();
   setupOneOffDelegation();
   setupDecisionDelegation();
   setupVisitDelegation();
