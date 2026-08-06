@@ -376,9 +376,9 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
       </div>
 
       <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-lbl">Patrimonio líquido</div><div class="kpi-val" id="kpiSavings">$0</div><div class="kpi-sub">todas las cuentas, en AUD</div></div>
+        <div class="kpi"><div class="kpi-lbl">Patrimonio líquido<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Todas las cuentas juntas, incluyendo el fondo de emergencia. Ver Patrimonio para el detalle por cuenta.</span></span></div><div class="kpi-val" id="kpiSavings">$0</div><div class="kpi-sub">todas las cuentas, en AUD</div></div>
         <div class="kpi"><div class="kpi-lbl">Capacidad de ahorro</div><div class="kpi-val" id="kpiCap">$0</div><div class="kpi-sub">por mes</div></div>
-        <div class="kpi"><div class="kpi-lbl">Fondo de emergencia</div><div class="kpi-val" id="kpiEf">$0</div><div class="kpi-sub" id="kpiEfSub">objetivo</div></div>
+        <div class="kpi"><div class="kpi-lbl">Fondo de emergencia<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Solo cuenta el dinero en cuentas marcadas como "Fondo de emergencia" en Patrimonio — no tu ahorro total. Ese dinero queda aparte y no se usa para calcular el pie de la casa.</span></span></div><div class="kpi-val" id="kpiEf">$0</div><div class="kpi-sub" id="kpiEfSub">objetivo</div></div>
         <div class="kpi"><div class="kpi-lbl">House Readiness Score<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">35% fondo de emergencia + 30% tasa de ahorro + 35% viabilidad/aprobación bancaria. Detalle completo en la Guía.</span></span></div><div class="kpi-val" id="kpiScore">0</div><div class="kpi-sub">de 100</div></div>
       </div>
 
@@ -578,7 +578,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
           <div class="stat-row"><span class="lbl">Capacidad de ahorro semanal</span><span class="val" id="capWeek">$0</span></div>
           <div class="stat-row total"><span class="lbl">Ahorro proyectado en el horizonte</span><span class="val" id="capTotal">$0</span></div>
           <div class="stat-row"><span class="lbl">Fondo de emergencia objetivo</span><span class="val" id="efTarget">$0</span></div>
-          <div class="stat-row"><span class="lbl">Ahorro disponible sobre el fondo de emergencia</span><span class="val" id="efSurplus">$0</span></div>
+          <div class="stat-row"><span class="lbl">Fondo de emergencia — sobre/bajo el objetivo<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">Compara solo las cuentas marcadas "Fondo de emergencia" contra el objetivo — no tu ahorro total. Marca el propósito de cada cuenta más abajo.</span></span></span><span class="val" id="efSurplus">$0</span></div>
           <div class="stat-row total"><span class="lbl">House Readiness Score (0-100)<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">35% fondo de emergencia + 30% tasa de ahorro + 35% viabilidad/aprobación bancaria. Ver la página Guía para el detalle completo.</span></span></span><span class="val" id="hrScore">0</span></div>
         </div>
       </div>
@@ -599,6 +599,7 @@ table.compare td.num{ font-family:'IBM Plex Mono',monospace; }
         <input type="file" id="importAccountExcelFile" accept=".xlsx,.xls,.csv" style="display:none;">
       </div>
       <div class="card">
+        <p style="color:var(--muted); font-size:13.5px; margin:0 0 12px 0;">Marca el propósito de cada cuenta: "Fondo de emergencia" queda separado y no se cuenta como disponible para el pie de la casa.</p>
         <div id="accountLines"></div>
         <div class="addrow"><button class="btn ghost small" id="addAccount">+ Agregar cuenta</button></div>
       </div>
@@ -925,9 +926,10 @@ async function load(){
   if(!state.accounts || state.accounts.length === 0){
     // Migración: si existía el campo antiguo de "ahorros" en una sola cifra, se convierte en una cuenta.
     state.accounts = [
-      { id: crypto.randomUUID(), name:'Ahorros', currency:'AUD', balance: state.savings||0, fx:0 }
+      { id: crypto.randomUUID(), name:'Ahorros', currency:'AUD', balance: state.savings||0, fx:0, purpose:'deposito' }
     ];
   }
+  (state.accounts||[]).forEach(a=>{ if(a.purpose === undefined) a.purpose = 'deposito'; });
   if(!state.oneOffs) state.oneOffs = [];
   if(!state.decisions) state.decisions = [];
   if(!state.propertyVisits) state.propertyVisits = [];
@@ -1054,6 +1056,15 @@ function toAUD(amount, currency, fx){
 function totalSavingsCash(){
   return (state.accounts||[]).reduce((sum,a)=> sum + toAUD(a.balance, a.currency, a.fx), 0);
 }
+// Solo las cuentas marcadas explícitamente como "Fondo de emergencia" cuentan para el colchón.
+function emergencyFundCash(){
+  return (state.accounts||[]).filter(a=>a.purpose==='emergencia').reduce((sum,a)=> sum + toAUD(a.balance, a.currency, a.fx), 0);
+}
+// Efectivo disponible para el pie de la casa: el total, menos lo reservado como fondo de emergencia
+// (ese dinero no se cuenta dos veces — no está disponible para gastarlo en la compra).
+function depositAvailableCash(){
+  return totalSavingsCash() - emergencyFundCash();
+}
 
 // Puntaje compuesto 0-100, referencial: qué tan lista está la familia para comprar,
 // combinando colchón de emergencia, tasa de ahorro y margen de aprobación bancaria del mejor escenario.
@@ -1062,7 +1073,7 @@ function houseReadinessScore(){
   const income = totalMonthly(state.incomes);
   const savingsRate = income > 0 ? capMonthly / income : 0;
   const efTarget = totalMonthly(state.expenses) * (state.efMonths||3);
-  const cash = totalSavingsCash();
+  const cash = emergencyFundCash();
   const efScore = efTarget > 0 ? Math.min(1, cash / efTarget) : (cash>0?1:0);
   const rateScore = Math.min(1, Math.max(0, savingsRate / 0.30)); // 30% de tasa de ahorro = tope de este componente
   let bankScore = 0;
@@ -1174,7 +1185,7 @@ function calcScenario(sc){
   const avgLVR = totalPrice > 0 ? (totalLoanForLVR / totalPrice) * 100 : 0;
   const avgRate = totalLoanForLVR > 0 ? weightedRate / totalLoanForLVR : 0;
   const avgYears = totalLoanForLVR > 0 ? Math.round(weightedYears / totalLoanForLVR) : 30;
-  const gap = Math.max(0, totalUpfront - totalSavingsCash());
+  const gap = Math.max(0, totalUpfront - depositAvailableCash());
   const monthsLeft = state.months || 1;
   const reqMonthly = gap / monthsLeft;
   const reqWeekly = reqMonthly / 4.33;
@@ -1356,7 +1367,7 @@ $('addScenario').addEventListener('click', ()=>{
 
 /* ---------- Ruta (signature element): hitos reales, en orden de dependencia ---------- */
 function renderRoute(rows){
-  const efOk = (totalSavingsCash() - totalMonthly(state.expenses)*(state.efMonths||3)) >= 0;
+  const efOk = (emergencyFundCash() - totalMonthly(state.expenses)*(state.efMonths||3)) >= 0;
   const anyViable = rows.some(x=>x.r.viable);
   const anyBankOk = rows.some(x=>x.r.bankApproves);
   const hasVisit = (state.propertyVisits||[]).length > 0;
@@ -1391,7 +1402,8 @@ function updateComputed(){
   const expensesNow = totalMonthly(state.expenses);
   const efTarget = expensesNow * (state.efMonths||3);
   $('efTarget').textContent = fmt(efTarget);
-  const efSurplus = savingsCash - efTarget;
+  const efCash = emergencyFundCash();
+  const efSurplus = efCash - efTarget;
   const efEl = $('efSurplus');
   efEl.textContent = fmt(efSurplus);
   efEl.style.color = efSurplus >= 0 ? 'var(--green)' : 'var(--red)';
@@ -1494,7 +1506,7 @@ function updateComputed(){
 }
 
 // ---------- Cuentas (patrimonio) ----------
-function newAccount(){ return { id: crypto.randomUUID(), name:'Nueva cuenta', currency:'AUD', balance:0, fx:0 }; }
+function newAccount(){ return { id: crypto.randomUUID(), name:'Nueva cuenta', currency:'AUD', balance:0, fx:0, purpose:'deposito' }; }
 function accountHTML(a){
   return `
     <div class="prop" data-row="${a.id}">
@@ -1504,6 +1516,7 @@ function accountHTML(a){
         <div class="field"><label>Moneda</label><select data-id="${a.id}" data-field="currency"><option value="AUD" ${a.currency==='AUD'?'selected':''}>AUD</option><option value="COP" ${a.currency==='COP'?'selected':''}>COP</option></select></div>
         <div class="field"><label>Saldo</label><input type="number" value="${a.balance}" data-id="${a.id}" data-field="balance"></div>
         <div class="field"><label>FX (COP por AUD, solo si es COP)</label><input type="number" min="0" value="${a.fx||0}" data-id="${a.id}" data-field="fx"></div>
+        <div class="field"><label>Propósito<span class="hint" tabindex="0" aria-label="Ayuda">?<span class="hint-bubble">"Fondo de emergencia" separa este dinero del cálculo del pie — no se cuenta como disponible para comprar, y solo este dinero cuenta para el colchón de emergencia. "Ahorro para el pie" es el default: cuenta como disponible para la compra.</span></span></label><select data-id="${a.id}" data-field="purpose"><option value="deposito" ${a.purpose!=='emergencia'?'selected':''}>Ahorro para el pie</option><option value="emergencia" ${a.purpose==='emergencia'?'selected':''}>Fondo de emergencia</option></select></div>
       </div>
     </div>`;
 }
@@ -1941,8 +1954,10 @@ function parseAccountsWorkbook(workbook){
     const moneda = normText(get('moneda','currency')) === 'cop' ? 'COP' : 'AUD';
     const saldo = parseFloat(get('saldo','balance','monto','valor')) || 0;
     const fx = parseFloat(get('fx','tipodecambio','exchangerate')) || 0;
+    const purposeRaw = normText(get('proposito','purpose','tipo'));
+    const purpose = (purposeRaw.includes('emergencia')) ? 'emergencia' : 'deposito';
     if(!nombre) return;
-    accounts.push({ id: crypto.randomUUID(), name:String(nombre), currency:moneda, balance:saldo, fx });
+    accounts.push({ id: crypto.randomUUID(), name:String(nombre), currency:moneda, balance:saldo, fx, purpose });
   });
   return accounts;
 }
